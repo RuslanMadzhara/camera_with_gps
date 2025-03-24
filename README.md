@@ -1,6 +1,4 @@
-Below is a neatly formatted version of the README for the **Camera With GPS Flutter Plugin**:
 
----
 
 # Camera With GPS Flutter Plugin
 
