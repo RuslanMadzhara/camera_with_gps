@@ -1,0 +1,17 @@
+name: camera_with_gps_example
+description: Demonstrates how to use camera_with_gps.
+version: 1.0.0+1
+publish_to: none
+
+environment:
+  sdk: ^3.7.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  camera_with_gps:
+    path: ../
+
+flutter:
+  uses-material-design: true
