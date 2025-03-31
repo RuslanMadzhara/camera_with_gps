@@ -7,7 +7,7 @@ import 'package:exif/exif.dart';
 
 void main() {
   runApp(MaterialApp(
-    navigatorKey: CameraWithGps.navigatorKey,
+    // The navigatorKey is no longer needed
     home: const TestPage(),
   ));
 }
@@ -23,7 +23,8 @@ class _TestPageState extends State<TestPage> {
   Uint8List? _imageData;
 
   Future<void> _capturePhoto() async {
-    final path = await CameraWithGps.openCamera();
+    // Pass BuildContext to openCamera
+    final path = await CameraWithGps.openCamera(context);
     if (path == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error capturing photo')),
@@ -51,7 +52,10 @@ class _TestPageState extends State<TestPage> {
               : 'No GPS metadata found',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
         ],
       ),
     );
