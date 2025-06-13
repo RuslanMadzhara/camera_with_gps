@@ -10,8 +10,9 @@ dependencies:
   flutter:
     sdk: flutter
 
+
   camera_with_gps:
     path: ../
-
+  permission_handler: ^11.0.0
 flutter:
   uses-material-design: true

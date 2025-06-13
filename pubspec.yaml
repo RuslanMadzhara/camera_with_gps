@@ -16,6 +16,7 @@ dependencies:
   geolocator: ^13.0.3
   exif: ^3.3.0
   plugin_platform_interface: ^2.1.8
+  permission_handler: ^11.0.0
 
 flutter:
   plugin:

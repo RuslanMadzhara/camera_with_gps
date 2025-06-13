@@ -49,7 +49,5 @@
     <string>We need camera access to take photos</string>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>We need your location to embed GPS coordinates into photos</string>
-    <key>NSMicrophoneUsageDescription</key>
-    <string>This app needs microphone access to record audio (required by camera)</string>
 </dict>
 </plist>
