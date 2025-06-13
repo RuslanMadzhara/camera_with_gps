@@ -30,12 +30,7 @@ class _TestPageState extends State<TestPage> {
   Uint8List? _imageData;
 
   Future<void> _capturePhoto() async {
-    final cameraStatus = await Permission.camera.request();
-    final locationStatus = await Permission.locationWhenInUse.request();
 
-    // if (!cameraStatus.isGranted || !locationStatus.isGranted) return;
-
-    // Відкриваємо камеру
     final path = await CameraWithGps.openCamera(context);
     if (path == null) return;
 

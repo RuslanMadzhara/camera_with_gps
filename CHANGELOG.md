@@ -4,3 +4,10 @@
 ## 0.1.1+1 - 2025-03-31
  - Update `openCamera` to require `BuildContext` for navigation 
  - Replaced `navigatorKey` with a `BuildContext` parameter in `openCamera` for improved navigation handling. 
+ - ## 0.2.0 - 2025-06-13
+ - **Integrate permission_handler package and update configurations**
+    - Added `permission_handler` dependency in `pubspec.yaml` and example project.
+    - Updated iOS project configuration to include `permission_handler_apple`.
+    - Removed unused permissions and microphone description in `Info.plist`.
+    - Updated AndroidManifest.xml for clean-up of blank lines.
+
