@@ -31,7 +31,7 @@ class CameraWithGps {
 
     // 3) Initialize the camera
     final cameras = await availableCameras();
-    final controller = CameraController(cameras.first, ResolutionPreset.high);
+    final controller = CameraController(cameras.first, ResolutionPreset.high ,enableAudio: false);
     // Do NOT dispose the controller here – the CameraPreviewPage will handle it.
     await controller.initialize();
 

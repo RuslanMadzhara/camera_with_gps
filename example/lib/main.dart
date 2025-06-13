@@ -1,20 +1,27 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:camera_with_gps/camera_with_gps.dart';
 import 'package:exif/exif.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() {
-  runApp(MaterialApp(
-    // The navigatorKey is no longer needed
-    home: const TestPage(),
-  ));
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      home: TestPage(),
+      debugShowCheckedModeBanner: false,
+    );
+  }
 }
 
 class TestPage extends StatefulWidget {
-  const TestPage({Key? key}) : super(key: key);
-
+  const TestPage({super.key});
   @override
   State<TestPage> createState() => _TestPageState();
 }
@@ -23,14 +30,14 @@ class _TestPageState extends State<TestPage> {
   Uint8List? _imageData;
 
   Future<void> _capturePhoto() async {
-    // Pass BuildContext to openCamera
+    final cameraStatus = await Permission.camera.request();
+    final locationStatus = await Permission.locationWhenInUse.request();
+
+    // if (!cameraStatus.isGranted || !locationStatus.isGranted) return;
+
+    // Відкриваємо камеру
     final path = await CameraWithGps.openCamera(context);
-    if (path == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error capturing photo')),
-      );
-      return;
-    }
+    if (path == null) return;
 
     final bytes = await File(path).readAsBytes();
     final Map<String?, IfdTag>? tags = await readExifFromBytes(bytes);
@@ -64,9 +71,7 @@ class _TestPageState extends State<TestPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Camera with GPS'),
-      ),
+      appBar: AppBar(title: const Text('Camera with GPS')),
       body: Center(
         child: _imageData != null
             ? Image.memory(_imageData!, fit: BoxFit.cover)

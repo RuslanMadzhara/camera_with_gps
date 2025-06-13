@@ -5,6 +5,32 @@ plugins {
     id "kotlin-android"
 }
 
+// Initialize ext if it doesn't exist
+rootProject.ext {
+    // Default values that will be used if not defined elsewhere
+    if (!has('compileSdkVersion')) {
+        compileSdkVersion = 33
+    }
+    if (!has('targetSdkVersion')) {
+        targetSdkVersion = 33
+    }
+    if (!has('javaVersion')) {
+        javaVersion = JavaVersion.VERSION_17
+    }
+    if (!has('kotlinJvmTarget')) {
+        kotlinJvmTarget = "17"
+    }
+    if (!has('kotlinVersion')) {
+        kotlinVersion = "1.8.22"
+    }
+    if (!has('desugarVersion')) {
+        desugarVersion = "2.1.5"
+    }
+    if (!has('exifInterfaceVersion')) {
+        exifInterfaceVersion = "1.3.6"
+    }
+}
+
 // If you have a local.properties, you can load it similarly
 def localProperties = new Properties()
 File localPropsFile = rootProject.file("local.properties")
@@ -16,12 +42,16 @@ if (localPropsFile.exists()) {
 
 android {
     namespace "camera_gps_plugin"
-    compileSdkVersion 33
-    ndkVersion "27.0.12077973"
+    compileSdkVersion rootProject.ext.has("compileSdkVersion") ? rootProject.ext.get("compileSdkVersion") : 33
+
+    // Make NDK version configurable or use project's NDK version if available
+    if (rootProject.ext.has("ndkVersion")) {
+        ndkVersion rootProject.ext.get("ndkVersion")
+    }
 
     defaultConfig {
         minSdkVersion 21
-        targetSdkVersion 33
+        targetSdkVersion rootProject.ext.has("targetSdkVersion") ? rootProject.ext.get("targetSdkVersion") : 33
         // Because it’s a library, we do NOT specify applicationId
         // or versionCode / versionName here
     }
@@ -32,24 +62,43 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        def javaVersion = JavaVersion.VERSION_17
+        if (rootProject.ext.has('javaVersion')) {
+            javaVersion = rootProject.ext.javaVersion
+        }
+        sourceCompatibility javaVersion
+        targetCompatibility javaVersion
         coreLibraryDesugaringEnabled true
     }
 
     kotlinOptions {
-        jvmTarget = "17"
+        def jvmTarget = "17"
+        if (rootProject.ext.has('kotlinJvmTarget')) {
+            jvmTarget = rootProject.ext.kotlinJvmTarget
+        }
+        jvmTarget = jvmTarget
     }
 }
 
 dependencies {
     // Kotlin standard library
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22"
+    def kotlinVersion = "1.8.22"
+    if (rootProject.ext.has('kotlinVersion')) {
+        kotlinVersion = rootProject.ext.kotlinVersion
+    }
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
 
     // ExifInterface for `Unresolved reference: ExifInterface`
-    implementation "androidx.exifinterface:exifinterface:1.3.6"
+    def exifInterfaceVersion = "1.3.6"
+    if (rootProject.ext.has('exifInterfaceVersion')) {
+        exifInterfaceVersion = rootProject.ext.exifInterfaceVersion
+    }
+    implementation "androidx.exifinterface:exifinterface:$exifInterfaceVersion"
 
     // Desugar libs, if you want to match your other project
-    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.5"
+    def desugarVersion = "2.1.5"
+    if (rootProject.ext.has('desugarVersion')) {
+        desugarVersion = rootProject.ext.desugarVersion
+    }
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:$desugarVersion"
 }
-
