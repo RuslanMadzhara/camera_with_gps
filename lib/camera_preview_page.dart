@@ -116,13 +116,11 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> {
       setState(() => _isCapturing = true);
       final file = await _controller.takePicture();
 
-      bool success = true;
-
       // Only try to add GPS metadata if GPS is enabled
       if (_isGpsEnabled) {
         try {
           final pos = await Geolocator.getCurrentPosition();
-          success = await CameraWithGps.addGps(
+          await CameraWithGps.addGps(
             path: file.path,
             latitude: pos.latitude,
             longitude: pos.longitude,
@@ -229,13 +227,11 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> {
       final picker = ImagePicker();
       final picked = await picker.pickImage(source: ImageSource.gallery);
       if (picked != null) {
-        bool success = true;
-
         // Only try to add GPS metadata if GPS is enabled
         if (_isGpsEnabled) {
           try {
             final pos = await Geolocator.getCurrentPosition();
-            success = await CameraWithGps.addGps(
+            await CameraWithGps.addGps(
               path: picked.path,
               latitude: pos.latitude,
               longitude: pos.longitude,
