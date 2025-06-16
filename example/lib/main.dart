@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:camera_with_gps/camera_with_gps.dart';
 import 'package:exif/exif.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:image/image.dart' as img;
+
 
 void main() {
   runApp(const MyApp());
@@ -36,22 +38,66 @@ class _TestPageState extends State<TestPage> {
 
     final bytes = await File(path).readAsBytes();
     final Map<String?, IfdTag>? tags = await readExifFromBytes(bytes);
+    final exifData = img.decodeJpgExif(bytes);
 
-    final lat = tags?['GPS GPSLatitude']?.printable;
-    final latRef = tags?['GPS GPSLatitudeRef']?.printable;
-    final lon = tags?['GPS GPSLongitude']?.printable;
-    final lonRef = tags?['GPS GPSLongitudeRef']?.printable;
+    // Print all EXIF data for debugging
+    print('===== EXIF DATA =====');
+    if (tags != null) {
+      // Group tags by IFD
+      final ifdGroups = <String, Map<String, String>>{};
+
+      for (final entry in tags.entries) {
+        if (entry.key == null) continue;
+
+        String group = 'other';
+        if (entry.key!.startsWith('Image')) group = 'ifd0';
+        else if (entry.key!.startsWith('EXIF')) group = 'exif';
+        else if (entry.key!.startsWith('GPS')) group = 'gps';
+
+        ifdGroups.putIfAbsent(group, () => {});
+        ifdGroups[group]![entry.key!] = entry.value.printable;
+      }
+
+      // Print each group
+      for (final group in ifdGroups.keys) {
+        print('$group');
+        for (final entry in ifdGroups[group]!.entries) {
+          print('\t${entry.key}: ${entry.value}');
+        }
+      }
+    }
+
+    // Extract all GPS related tags for display
+    final gpsData = <String, String>{};
+    if (tags != null) {
+      for (final entry in tags.entries) {
+        if (entry.key != null && entry.key!.startsWith('GPS')) {
+          gpsData[entry.key!] = entry.value.printable;
+        }
+      }
+    }
 
     setState(() => _imageData = bytes);
 
+    // Display all GPS metadata
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Photo Metadata'),
-        content: Text(
-          (lat != null && lon != null)
-              ? 'Latitude: $lat $latRef\nLongitude: $lon $lonRef'
-              : 'No GPS metadata found',
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (gpsData.isEmpty)
+                const Text('No GPS metadata found')
+              else
+                ...gpsData.entries.map((e) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Text('${e.key}: ${e.value}'),
+                    )),
+            ],
+          ),
         ),
         actions: [
           TextButton(
