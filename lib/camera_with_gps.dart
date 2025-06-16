@@ -15,13 +15,11 @@ class CameraWithGps {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw Exception('Location permission denied.');
-        }
+        // We allow camera to open even if location permission is denied
+        // The warning will be displayed on the camera preview page
       }
-      if (permission == LocationPermission.deniedForever) {
-        throw Exception('Location permission permanently denied.');
-      }
+      // We allow camera to open even if location permission is permanently denied
+      // The warning will be displayed on the camera preview page
 
       // Get available cameras
       final cameras = await availableCameras();

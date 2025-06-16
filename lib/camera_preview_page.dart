@@ -23,11 +23,14 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> {
   int _cameraIndex = 0;
   bool _isInitialized = false;
   String? _errorMessage;
-  bool _isGpsEnabled = false;
+  // GPS status
+  bool _isGpsServiceEnabled = false;
+  LocationPermission? _permission;
 
   @override
   void initState() {
     super.initState();
+    // choose back camera by default
     for (int i = 0; i < widget.cameras.length; i++) {
       if (widget.cameras[i].lensDirection == CameraLensDirection.back) {
         _cameraIndex = i;
@@ -37,16 +40,14 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> {
     _checkGpsStatus();
     _initializeCamera();
 
-    // Periodically check GPS status
+    // start periodic GPS status checks (every 3 s, after 2 s delay)
     Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        _startGpsStatusCheck();
-      }
+      if (mounted) _startGpsStatusCheck();
     });
   }
 
+  /*──────────────── GPS helpers ────────────────*/
   void _startGpsStatusCheck() {
-    // Check GPS status every 3 seconds
     Future.doWhile(() async {
       if (!mounted) return false;
       await _checkGpsStatus();
@@ -57,20 +58,42 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> {
 
   Future<void> _checkGpsStatus() async {
     try {
-      bool isEnabled = await Geolocator.isLocationServiceEnabled();
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      final permission = await Geolocator.checkPermission();
       if (mounted) {
         setState(() {
-          _isGpsEnabled = isEnabled;
+          _isGpsServiceEnabled = serviceEnabled;
+          _permission = permission;
         });
       }
     } catch (e) {
-      print('Error checking GPS status: $e');
       if (mounted) {
         setState(() {
-          _isGpsEnabled = false;
+          _isGpsServiceEnabled = false;
+          _permission = null;
         });
       }
     }
+  }
+
+  /// Returns warning banner message or `null` if everything is fine.
+  String? _gpsWarningMessage() {
+    if (!_isGpsServiceEnabled) {
+      return 'GPS is disabled…'; // 🟥
+    }
+    if (_permission == LocationPermission.denied) {
+      return 'GPS permission denied…'; // 🟡
+    }
+    if (_permission == LocationPermission.deniedForever) {
+      return 'GPS permission permanently denied…'; // ⛔
+    }
+    return null;
+  }
+
+  bool get _canAddGpsData {
+    if (!_isGpsServiceEnabled) return false;
+    return _permission == LocationPermission.always ||
+        _permission == LocationPermission.whileInUse;
   }
 
   Future<void> _initializeCamera() async {
@@ -111,13 +134,11 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> {
 
   Future<void> _capturePhoto() async {
     if (_isCapturing || !_isInitialized) return;
-
+    setState(() => _isCapturing = true);
     try {
-      setState(() => _isCapturing = true);
       final file = await _controller.takePicture();
 
-      // Only try to add GPS metadata if GPS is enabled
-      if (_isGpsEnabled) {
+      if (_canAddGpsData) {
         try {
           final pos = await Geolocator.getCurrentPosition();
           await CameraWithGps.addGps(
@@ -125,25 +146,18 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> {
             latitude: pos.latitude,
             longitude: pos.longitude,
           );
-        } catch (e) {
-          print('Error adding GPS data: $e');
-          // Continue without GPS data
-        }
+        } catch (_) {/* ignore, keep photo */}
       }
 
-      if (mounted) {
-        Navigator.of(context).pop(file.path); // Return path even if GPS data wasn't added
-      }
+      if (mounted) Navigator.of(context).pop(file.path);
     } catch (e) {
-      print('Error capturing photo: $e');
       if (mounted) {
-        setState(() {
-          _isCapturing = false;
-        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to capture photo: $e')),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isCapturing = false);
     }
   }
 
@@ -224,30 +238,20 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> {
 
   Future<void> _pickFromGallery() async {
     try {
-      final picker = ImagePicker();
-      final picked = await picker.pickImage(source: ImageSource.gallery);
-      if (picked != null) {
-        // Only try to add GPS metadata if GPS is enabled
-        if (_isGpsEnabled) {
-          try {
-            final pos = await Geolocator.getCurrentPosition();
-            await CameraWithGps.addGps(
-              path: picked.path,
-              latitude: pos.latitude,
-              longitude: pos.longitude,
-            );
-          } catch (e) {
-            print('Error adding GPS data to gallery image: $e');
-            // Continue without GPS data
-          }
-        }
-
-        if (mounted) {
-          Navigator.of(context).pop(picked.path); // Return path even if GPS data wasn't added
-        }
+      final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+      if (picked == null) return;
+      if (_canAddGpsData) {
+        try {
+          final pos = await Geolocator.getCurrentPosition();
+          await CameraWithGps.addGps(
+            path: picked.path,
+            latitude: pos.latitude,
+            longitude: pos.longitude,
+          );
+        } catch (_) {/* ignore */}
       }
+      if (mounted) Navigator.of(context).pop(picked.path);
     } catch (e) {
-      print('Error picking from gallery: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to pick image: $e')),
@@ -311,21 +315,26 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> {
             const Center(child: CircularProgressIndicator()),
 
           // GPS warning banner
-          if (_isInitialized && !_isGpsEnabled)
-            Positioned(
-              top: 100,
-              left: 0,
-              right: 0,
-              child: Container(
-                color: Colors.red.withOpacity(0.7),
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                child: const Text(
-                  'GPS is disabled. Please enable GPS to add geodata to photos.',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
+          if (_isInitialized && _errorMessage == null)
+            Builder(builder: (context) {
+              final gpsWarning = _gpsWarningMessage();
+              if (gpsWarning == null) return const SizedBox.shrink();
+
+              return Positioned(
+                top: 100,
+                left: 0,
+                right: 0,
+                child: Container(
+                  color: Colors.red.withOpacity(0.8),
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  child: Text(
+                    gpsWarning,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
                 ),
-              ),
-            ),
+              );
+            }),
 
           if (_isInitialized && _errorMessage == null) ...[
             Positioned(

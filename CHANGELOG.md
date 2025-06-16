@@ -1,3 +1,11 @@
+## 1.0.1 - 2023-11-20
+- Enhanced GPS status warnings with specific messages:
+  - When GPS is disabled: "GPS is disabled..."
+  - When GPS permission is denied: "GPS permission denied..."
+  - When GPS permission is permanently denied: "GPS permission permanently denied..."
+- Fixed issue with camera not opening when location permission is permanently denied
+- Allow camera to open regardless of location permission status
+
 ## 1.0.0 - 2023-11-15
 - First stable release of Camera With GPS plugin
 - Improved stability and performance
@@ -16,6 +24,5 @@
 - Update `openCamera` to require `BuildContext` for navigation 
 - Replaced `navigatorKey` with a `BuildContext` parameter in `openCamera` for improved navigation handling
 
-## 0.1.0+1 - 2025-03-24
-- Initial release of Camera With GPS plugin
-- Supports capturing photos and embedding GPS metadata on both iOS and Android
+## 0.1.0+2 - 2025-03-24
+- "Allow camera usage without GPS permission and enhance GPS status warnings"
