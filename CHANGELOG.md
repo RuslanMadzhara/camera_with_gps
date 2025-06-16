@@ -2,6 +2,8 @@
 - First stable release of Camera With GPS plugin
 - Improved stability and performance
 - Updated documentation
+- Added support for taking photos when GPS is disabled
+- Added warning message when GPS is disabled
 
 ## 0.2.0 - 2025-06-13
 - **Integrate permission_handler package and update configurations**

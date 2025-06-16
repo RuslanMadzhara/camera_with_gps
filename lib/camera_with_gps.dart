@@ -11,11 +11,7 @@ class CameraWithGps {
   /// Відкриває повноекранну камеру або вибір з галереї
   static Future<String?> openCamera(BuildContext context) async {
     try {
-      // Check location services
-      if (!await Geolocator.isLocationServiceEnabled()) {
-        throw Exception('Location services are disabled.');
-      }
-
+      // Check location permission (but don't require GPS to be enabled)
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();

@@ -12,6 +12,7 @@ A Flutter plugin for capturing photos with embedded GPS metadata. It provides a 
 
 - **Full-screen camera UI:** For high-resolution photo capture.
 - **Automatic GPS metadata:** Embeds latitude and longitude into photos.
+- **Graceful GPS handling:** Works even when GPS is disabled, showing a warning message.
 - **Cross-platform support:** Works on both iOS and Android.
 - **Lightweight & efficient:** Easy integration into your Flutter projects.
 
@@ -105,7 +106,7 @@ Launch the camera UI and capture a photo:
 ```dart
 Future<void> openCamera() async {
   try {
-    final photoPath = await CameraWithGps.openCamera();
+    final photoPath = await CameraWithGps.openCamera(context);
     if (photoPath != null) {
       print('Photo saved at: $photoPath');
     }
@@ -114,6 +115,8 @@ Future<void> openCamera() async {
   }
 }
 ```
+
+Note: The plugin now allows taking photos even when GPS is disabled. In this case, a warning message will be displayed to the user, but they can still capture photos (without GPS metadata).
 
 ### Embedding GPS Metadata
 

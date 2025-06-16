@@ -23,6 +23,7 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> {
   int _cameraIndex = 0;
   bool _isInitialized = false;
   String? _errorMessage;
+  bool _isGpsEnabled = false;
 
   @override
   void initState() {
@@ -33,7 +34,43 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> {
         break;
       }
     }
+    _checkGpsStatus();
     _initializeCamera();
+
+    // Periodically check GPS status
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        _startGpsStatusCheck();
+      }
+    });
+  }
+
+  void _startGpsStatusCheck() {
+    // Check GPS status every 3 seconds
+    Future.doWhile(() async {
+      if (!mounted) return false;
+      await _checkGpsStatus();
+      await Future.delayed(const Duration(seconds: 3));
+      return mounted;
+    });
+  }
+
+  Future<void> _checkGpsStatus() async {
+    try {
+      bool isEnabled = await Geolocator.isLocationServiceEnabled();
+      if (mounted) {
+        setState(() {
+          _isGpsEnabled = isEnabled;
+        });
+      }
+    } catch (e) {
+      print('Error checking GPS status: $e');
+      if (mounted) {
+        setState(() {
+          _isGpsEnabled = false;
+        });
+      }
+    }
   }
 
   Future<void> _initializeCamera() async {
@@ -78,16 +115,26 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> {
     try {
       setState(() => _isCapturing = true);
       final file = await _controller.takePicture();
-      final pos = await Geolocator.getCurrentPosition();
 
-      final success = await CameraWithGps.addGps(
-        path: file.path,
-        latitude: pos.latitude,
-        longitude: pos.longitude,
-      );
+      bool success = true;
+
+      // Only try to add GPS metadata if GPS is enabled
+      if (_isGpsEnabled) {
+        try {
+          final pos = await Geolocator.getCurrentPosition();
+          success = await CameraWithGps.addGps(
+            path: file.path,
+            latitude: pos.latitude,
+            longitude: pos.longitude,
+          );
+        } catch (e) {
+          print('Error adding GPS data: $e');
+          // Continue without GPS data
+        }
+      }
 
       if (mounted) {
-        Navigator.of(context).pop(success ? file.path : null);
+        Navigator.of(context).pop(file.path); // Return path even if GPS data wasn't added
       }
     } catch (e) {
       print('Error capturing photo: $e');
@@ -182,14 +229,25 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> {
       final picker = ImagePicker();
       final picked = await picker.pickImage(source: ImageSource.gallery);
       if (picked != null) {
-        final pos = await Geolocator.getCurrentPosition();
-        final success = await CameraWithGps.addGps(
-          path: picked.path,
-          latitude: pos.latitude,
-          longitude: pos.longitude,
-        );
+        bool success = true;
+
+        // Only try to add GPS metadata if GPS is enabled
+        if (_isGpsEnabled) {
+          try {
+            final pos = await Geolocator.getCurrentPosition();
+            success = await CameraWithGps.addGps(
+              path: picked.path,
+              latitude: pos.latitude,
+              longitude: pos.longitude,
+            );
+          } catch (e) {
+            print('Error adding GPS data to gallery image: $e');
+            // Continue without GPS data
+          }
+        }
+
         if (mounted) {
-          Navigator.of(context).pop(success ? picked.path : null);
+          Navigator.of(context).pop(picked.path); // Return path even if GPS data wasn't added
         }
       }
     } catch (e) {
@@ -255,6 +313,23 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> {
             )
           else
             const Center(child: CircularProgressIndicator()),
+
+          // GPS warning banner
+          if (_isInitialized && !_isGpsEnabled)
+            Positioned(
+              top: 100,
+              left: 0,
+              right: 0,
+              child: Container(
+                color: Colors.red.withOpacity(0.7),
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                child: const Text(
+                  'GPS is disabled. Please enable GPS to add geodata to photos.',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
 
           if (_isInitialized && _errorMessage == null) ...[
             Positioned(
