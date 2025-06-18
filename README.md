@@ -1,238 +1,237 @@
+# Camera with GPS
 
+A Flutter plugin for capturing photos with embedded GPS metadata. This package provides a simple way to take photos and automatically embed the current GPS coordinates into the image's EXIF data.
 
-# Camera With GPS Flutter Plugin
+[![pub package](https://img.shields.io/pub/v/camera_with_gps.svg)](https://pub.dev/packages/camera_with_gps)
 
-A Flutter plugin for capturing photos with embedded GPS metadata. It provides a full-screen camera experience and automatically tags photos with the device's location (latitude and longitude).
+## Features
 
----
+- 📸 Take photos with a customizable camera interface
+- 🌍 Automatically embed GPS coordinates into photo metadata
+- 🔄 Support for both portrait and landscape orientations
+- 🔦 Flash control
+- 📱 Camera switching (front/back)
+- 📐 Aspect ratio toggling (16:9 or 4:3)
+- 🖼️ Gallery image picking
+- ⚠️ GPS status warnings (disabled, permission denied, etc.)
+- 📱 Support for both Android and iOS
 
-## Overview
-
-**CameraWithGps** offers:
-
-- **Full-screen camera UI:** For high-resolution photo capture.
-- **Automatic GPS metadata:** Embeds latitude and longitude into photos.
-- **Graceful GPS handling:** Works even when GPS is disabled, showing a warning message.
-- **Cross-platform support:** Works on both iOS and Android.
-- **Lightweight & efficient:** Easy integration into your Flutter projects.
-
----
-
-## Installation
-
-1. **Add the dependency** to your `pubspec.yaml` file:
-
-   ```yaml
-   dependencies:
-     camera_with_gps: ^1.0.0
-   ```
-
-2. **Install the package** by running:
-
-   ```shell
-   flutter pub get
-   ```
-
----
-
-## Platform Setup
+## Requirements
 
 ### Android
 
-1. **Permissions:** Add the following to your `AndroidManifest.xml`:
+Add the following permissions to your `AndroidManifest.xml` file:
 
-   ```xml
-   <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-   <uses-permission android:name="android.permission.CAMERA" />
-   <uses-feature android:name="android.hardware.camera" />
-   <uses-feature android:name="android.hardware.location.gps" />
-   ```
-
-2. **Minimum SDK:** Ensure your `android/app/build.gradle` includes:
-
-   ```text
-   android {
-     defaultConfig {
-       minSdkVersion 21 // Ensure minSdkVersion is 21 or higher
-       ...
-     }
-   }
-   ```
-
-3. **Runtime Permissions:** Make sure your app requests location permissions during runtime as needed.
+```xml
+<uses-permission android:name="android.permission.CAMERA" />
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+```
 
 ### iOS
 
-1. **Info.plist:** Add these keys for camera and location usage:
+Add the following keys to your `Info.plist` file:
 
-   ```xml
-   <key>NSCameraUsageDescription</key>
-   <string>This app requires camera access to take photos.</string>
-   <key>NSLocationWhenInUseUsageDescription</key>
-   <string>This app requires location access to add GPS data to photos.</string>
-   ```
+```xml
+<key>NSCameraUsageDescription</key>
+<string>This app needs camera access to take photos with GPS metadata</string>
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>This app needs location access to add GPS metadata to photos</string>
+```
 
-2. **Image I/O Framework:** Ensure it is included in your project.
+## Installation
 
----
+Add the following to your `pubspec.yaml` file:
+
+```yaml
+dependencies:
+  camera_with_gps: ^1.1.0
+```
+
+Then run:
+
+```bash
+flutter pub get
+```
 
 ## Usage
 
-### Importing the Plugin
-
-Include the package in your Dart file:
-
-```dart
-import 'package:camera_with_gps/camera_with_gps.dart';
-```
-
-### Initializing the Plugin
-
-Assign the plugin’s `navigatorKey` to your app’s Navigator:
-
-```dart
-void main() {
-  runApp(MaterialApp(
-    navigatorKey: CameraWithGps.navigatorKey,
-    home: const MyApp(),
-  ));
-}
-```
-
-### Opening the Camera
-
-Launch the camera UI and capture a photo:
-
-```dart
-Future<void> openCamera() async {
-  try {
-    final photoPath = await CameraWithGps.openCamera(context);
-    if (photoPath != null) {
-      print('Photo saved at: $photoPath');
-    }
-  } catch (e) {
-    print('Failed to open camera: $e');
-  }
-}
-```
-
-Note: The plugin now allows taking photos even when GPS is disabled. In this case, a warning message will be displayed to the user, but they can still capture photos (without GPS metadata).
-
-### Embedding GPS Metadata
-
-To manually add GPS metadata, call:
-
-```dart
-final success = await CameraWithGps.addGps(
-  path: '/path/to/photo.jpg',
-  latitude: 37.4219983,
-  longitude: -122.084,
-);
-print(success ? "GPS metadata added!" : "Failed to add GPS metadata.");
-```
-
----
-
-## Structure
-
-The plugin consists of the following components:
-
-1. **CameraWithGps:** Main class handling camera launching and EXIF editing.
-2. **CameraPreviewPage:** Provides the full-screen UI for capturing photos.
-3. **CameraWithGpsPlugin (Kotlin):** Manages Android EXIF metadata and native communication.
-4. **CameraWithGpsPlugin (Swift):** Manages iOS EXIF metadata and native communication.
-
----
-
-## API Reference
-
-| Method                               | Description                                                                          |
-|--------------------------------------|--------------------------------------------------------------------------------------|
-| `openCamera()`                       | Opens the camera interface and returns the file path of the captured photo.          |
-| `addGps(String, double, double)`     | Embeds GPS data (latitude and longitude) into an image file. Returns success/failure.  |
-
----
-
-## Example
-
-Below is a complete example of using the plugin in a Flutter application:
+### Basic Usage
 
 ```dart
 import 'package:camera_with_gps/camera_with_gps.dart';
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(MaterialApp(
-    navigatorKey: CameraWithGps.navigatorKey,
-    home: const MyApp(),
-  ));
+// Open camera and take a photo with GPS metadata
+Future<void> takePhotoWithGPS(BuildContext context) async {
+  final String? imagePath = await CameraWithGps.openCamera(context);
+
+  if (imagePath != null) {
+    // Use the image path as needed
+    print('Image saved at: $imagePath');
+  }
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+// Pick an image from gallery
+Future<void> pickImageFromGallery() async {
+  final String? imagePath = await CameraWithGps.pickFromGallery();
+
+  if (imagePath != null) {
+    // Use the image path as needed
+    print('Image selected from gallery: $imagePath');
+  }
+}
+
+// Manually add GPS data to an existing image
+Future<void> addGPSToImage(String imagePath, double latitude, double longitude) async {
+  final bool success = await CameraWithGps.addGps(
+    path: imagePath,
+    latitude: latitude,
+    longitude: longitude,
+  );
+
+  if (success) {
+    print('GPS data added successfully');
+  } else {
+    print('Failed to add GPS data');
+  }
+}
+```
+
+### Complete Example
+
+See the [example](https://github.com/RuslanMadzhara/camera_with_gps/tree/main/example) directory for a complete sample application.
+
+```dart
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:camera_with_gps/camera_with_gps.dart';
+import 'package:exif/exif.dart';
+
+class CameraExample extends StatefulWidget {
+  const CameraExample({Key? key}) : super(key: key);
+
+  @override
+  State<CameraExample> createState() => _CameraExampleState();
+}
+
+class _CameraExampleState extends State<CameraExample> {
+  Uint8List? _imageData;
+  Map<String, String> _gpsData = {};
 
   Future<void> _capturePhoto() async {
-    try {
-      final path = await CameraWithGps.openCamera();
-      if (path != null) {
-        print('Photo captured at: $path');
-      } else {
-        print('Capture canceled or failed.');
+    final path = await CameraWithGps.openCamera(context);
+    if (path == null) return;
+
+    final bytes = await File(path).readAsBytes();
+    final tags = await readExifFromBytes(bytes);
+
+    // Extract GPS data
+    final gpsData = <String, String>{};
+    if (tags != null) {
+      for (final entry in tags.entries) {
+        if (entry.key != null && entry.key!.startsWith('GPS')) {
+          gpsData[entry.key!] = entry.value.printable;
+        }
       }
-    } catch (e) {
-      print('Error: $e');
     }
+
+    setState(() {
+      _imageData = bytes;
+      _gpsData = gpsData;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Camera With GPS Example')),
+      appBar: AppBar(title: const Text('Camera with GPS Example')),
       body: Center(
-        child: ElevatedButton(
-          onPressed: _capturePhoto,
-          child: const Text('Capture Photo'),
-        ),
+        child: _imageData != null
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.memory(_imageData!, height: 300),
+                  const SizedBox(height: 20),
+                  Text('GPS Data:'),
+                  ..._gpsData.entries.map((e) => Text('${e.key}: ${e.value}')),
+                ],
+              )
+            : const Text('No image captured yet.'),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _capturePhoto,
+        child: const Icon(Icons.camera_alt),
       ),
     );
   }
 }
 ```
 
----
+## API Reference
 
-## Cross-platform Implementation
+### CameraWithGps.openCamera
 
-### Android
+**Signature:**
+`static Future<String?> openCamera(BuildContext context)`
 
-- **GPS Metadata Handling:** Uses Android's `ExifInterface` from Jetpack.
-- **Key File:** `CameraWithGpsPlugin.kt` handles native communication and metadata embedding.
+Opens a camera interface that allows the user to take a photo. If GPS is enabled and permission is granted, the photo will automatically have GPS coordinates embedded in its metadata.
 
-### iOS
+**Parameters:**
+- `context`: The BuildContext used for navigation.
 
-- **GPS Metadata Handling:** Uses the `Image I/O` framework.
-- **Key File:** `CameraWithGpsPlugin.swift` handles native communication and metadata embedding.
+**Returns:**
+- A `Future<String?>` that resolves to the path of the captured image, or `null` if the operation was cancelled or failed.
 
----
+### CameraWithGps.pickFromGallery
 
-## Contributing
+**Signature:**
+`static Future<String?> pickFromGallery()`
 
-Contributions are welcome! To contribute:
+Opens the device's gallery to select an existing image.
 
-1. **Fork** the repository.
-2. **Create** a new branch for your feature or bug fix.
-3. **Make** your enhancements or corrections.
-4. **Submit** a pull request.
+**Returns:**
+- A `Future<String?>` that resolves to the path of the selected image, or `null` if no image was selected.
 
----
+### CameraWithGps.addGps
+
+**Signature:**
+`static Future<bool> addGps({required String path, required double latitude, required double longitude})`
+
+Adds GPS coordinates to an existing image file.
+
+**Parameters:**
+- `path`: The file path of the image.
+- `latitude`: The latitude coordinate to embed.
+- `longitude`: The longitude coordinate to embed.
+
+**Returns:**
+- A `Future<bool>` that resolves to `true` if the operation was successful, or `false` otherwise.
+
+## Features and Limitations
+
+- The camera interface supports both portrait and landscape orientations.
+- GPS data is only added if location services are enabled and permission is granted.
+- Warning messages are displayed when GPS is disabled or permission is denied.
+- The camera can still be used even if GPS is disabled or permission is denied.
+- Images selected from the gallery do not automatically have GPS data added.
 
 ## License
 
-Released under the [MIT License](https://opensource.org/licenses/MIT). Feel free to use, modify, and distribute.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
----
-Developed and maintained by [Ruslan Madzhara](https://www.linkedin.com/in/ruslan-madzhara-118714236/).
+## Contributing
 
-## Changelog
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-For detailed version history, see [CHANGELOG.md](CHANGELOG.md).
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## Contact
+
+Developer: [Ruslan Madzhara](https://www.linkedin.com/in/ruslan-madzhara-118714236/)
+

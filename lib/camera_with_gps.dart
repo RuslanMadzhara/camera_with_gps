@@ -52,7 +52,6 @@ class CameraWithGps {
     return picked?.path;
   }
 
-  /// Додає GPS-метадані до фото
   static Future<bool> addGps({
     required String path,
     required double latitude,
