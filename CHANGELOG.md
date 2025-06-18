@@ -1,4 +1,4 @@
-## 0.2.0 - 2025-06-18 
+## 1.1.0 - 2025-06-18 
  - **Refactor CameraPreviewPage:**
   - Add orientation-aware UI, optimize GPS handling, and improve photo cropping/rotation logic"
 ## 0.2.0 - 2025-06-13
