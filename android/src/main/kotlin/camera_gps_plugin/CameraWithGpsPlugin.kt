@@ -1,15 +1,9 @@
 package camera_gps_plugin
 
-import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
-import android.provider.MediaStore
-import android.util.Log
-import androidx.core.content.ContextCompat
 import androidx.exifinterface.media.ExifInterface
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
@@ -111,6 +105,32 @@ class CameraWithGpsPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Acti
                 openDocumentImage(result)
             }
 
+            "checkGps" -> {
+                val path = call.argument<String>("path")
+                if (path == null) {
+                    result.success("ERROR")
+                } else {
+                    val isFakeGps = containsFakeSamsungGps(path)
+
+                    // Extract GPS coordinates from the image EXIF data
+                    var latValue: String? = null
+                    var lonValue: String? = null
+                    try {
+                        val exif = ExifInterface(path)
+                        latValue = exif.getAttribute(ExifInterface.TAG_GPS_LATITUDE)
+                        lonValue = exif.getAttribute(ExifInterface.TAG_GPS_LONGITUDE)
+                    } catch (e: IOException) {
+                        e.printStackTrace()
+                    }
+
+                    // Check if coordinates are missing or zero
+                    val isZeroCoords = (latValue == "0/1,0/1,0/1000" && lonValue == "0/1,0/1,0/1000")
+                    val isMissingCoords = (latValue == null || lonValue == null)
+
+                    result.success(if (isFakeGps || isZeroCoords || isMissingCoords) "FAKE" else "OK")
+                }
+            }
+
             else -> result.notImplemented()
         }
     }
@@ -127,7 +147,6 @@ class CameraWithGpsPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Acti
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "image/*"
-
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
             addFlags(Intent.FLAG_GRANT_PREFIX_URI_PERMISSION)

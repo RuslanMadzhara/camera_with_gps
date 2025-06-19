@@ -367,8 +367,9 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
     try {
       final imgPath = await CameraWithGps.pickFromGallery(context);
       if (imgPath == null) return;
-
-      if (mounted) Navigator.pop(context, imgPath);
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (context.mounted) Navigator.pop(context, imgPath);
+      });
     } catch (e) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Gallery error: $e')));
@@ -573,7 +574,7 @@ class _Preview extends StatelessWidget {
       );
     } else {
       final screenH = MediaQuery.of(context).size.height;
-      final previewW = screenH * wantRatio; // портрет-інвертоване ratio
+      final previewW = screenH * wantRatio;
 
       return Center(
         child: ClipRect(
