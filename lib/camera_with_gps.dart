@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'camera_preview_page.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
 class CameraWithGps {
   static const MethodChannel _channel = MethodChannel('camera_with_gps');
@@ -37,12 +38,32 @@ class CameraWithGps {
   }
 
   static Future<String?> pickFromGallery(BuildContext context) async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked == null) return null;
+    String? path;
 
-    final path = picked.path;
+    // Check if device is Android
+    final deviceInfo = DeviceInfoPlugin();
+    if (await _isSamsungSeries(deviceInfo)) {
+      // For Samsung S-series devices, use the file system picker
+      try {
+        path = await _channel.invokeMethod<String>('openDocumentImage');
+        if (path == null) return null;
+      } catch (e) {
+        print('Error opening document picker: $e');
+        // Fallback to image_picker if there's an error
+        final picker = ImagePicker();
+        final picked = await picker.pickImage(source: ImageSource.gallery);
+        if (picked == null) return null;
+        path = picked.path;
+      }
+    } else {
+      // For all other devices, use image_picker
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: ImageSource.gallery);
+      if (picked == null) return null;
+      path = picked.path;
+    }
 
+    // Check GPS data and handle as before
     final status = await _channel.invokeMethod<String>('checkGps', {'path': path});
     if (status == 'FAKE') {
       final confirm = await showDialog<bool>(
@@ -70,7 +91,27 @@ class CameraWithGps {
 
     return path;
   }
-  
+
+  // Helper method to check if device is a Samsung S-series
+  static Future<bool> _isSamsungSeries(DeviceInfoPlugin deviceInfo) async {
+    try {
+      final androidInfo = await deviceInfo.androidInfo;
+      final manufacturer = androidInfo.manufacturer?.toLowerCase() ?? '';
+      final model = androidInfo.model ?? '';
+
+      // Check if it's a Samsung device
+      if (manufacturer.contains('samsung')) {
+        // Check if it's an S-series model
+        return model.startsWith('SM-S') || 
+               model.toLowerCase().contains('galaxy s');
+      }
+      return false;
+    } catch (e) {
+      print('Error checking device info: $e');
+      return false;
+    }
+  }
+
   static Future<bool> addGps({
     required String path,
     required double latitude,
