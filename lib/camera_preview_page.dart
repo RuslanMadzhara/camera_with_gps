@@ -302,13 +302,30 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
         }
       }
 
-      if (_canGps) {
+
+
+      if (!_gpsOn) {
+        // GPS is OFF - remove GPS fields from EXIF
+        await CameraWithGps.removeGps(path: file.path);
+      } else if (_canGps) {
+        // GPS is ON and we have permission - get current position
         try {
           final p = await Geolocator.getCurrentPosition();
-          await CameraWithGps.addGps(
-              path: file.path, latitude: p.latitude, longitude: p.longitude);
-        } catch (_) {}
+
+          // Only add GPS data if the coordinates are not (0,0)
+          if (p.latitude != 0.0 || p.longitude != 0.0) {
+            await CameraWithGps.addGps(
+                path: file.path, latitude: p.latitude, longitude: p.longitude);
+          } else {
+            // If coordinates are (0,0) even with GPS ON, remove GPS fields
+            await CameraWithGps.removeGps(path: file.path);
+          }
+        } catch (_) {
+          // If we can't get position, remove GPS fields
+          await CameraWithGps.removeGps(path: file.path);
+        }
       }
+      // If GPS is ON but we don't have permission, don't modify EXIF
 
       if (mounted) Navigator.pop(context, file.path);
 
@@ -348,10 +365,10 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
 
   Future<void> _pickGallery() async {
     try {
-      final img = await ImagePicker().pickImage(source: ImageSource.gallery);
-      if (img == null) return;
-      // Don't add GPS data to photos selected from the gallery
-      if (mounted) Navigator.pop(context, img.path);
+      final imgPath = await CameraWithGps.pickFromGallery(context);
+      if (imgPath == null) return;
+
+      if (mounted) Navigator.pop(context, imgPath);
     } catch (e) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Gallery error: $e')));

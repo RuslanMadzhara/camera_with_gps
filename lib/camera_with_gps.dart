@@ -8,31 +8,21 @@ import 'package:image_picker/image_picker.dart';
 class CameraWithGps {
   static const MethodChannel _channel = MethodChannel('camera_with_gps');
 
-  /// Відкриває повноекранну камеру або вибір з галереї
   static Future<String?> openCamera(BuildContext context) async {
     try {
-      // Check location permission (but don't require GPS to be enabled)
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        // We allow camera to open even if location permission is denied
-        // The warning will be displayed on the camera preview page
+        await Geolocator.requestPermission();
       }
-      // We allow camera to open even if location permission is permanently denied
-      // The warning will be displayed on the camera preview page
 
-      // Get available cameras
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
         throw Exception('No cameras available on this device.');
       }
 
-      // Let the CameraPreviewPage handle controller initialization and disposal
       final resultPath = await Navigator.of(context).push<String>(
         MaterialPageRoute(
-          builder: (_) => CameraPreviewPage(
-            cameras: cameras,
-          ),
+          builder: (_) => CameraPreviewPage(cameras: cameras),
         ),
       );
 
@@ -46,12 +36,41 @@ class CameraWithGps {
     }
   }
 
-  static Future<String?> pickFromGallery() async {
+  static Future<String?> pickFromGallery(BuildContext context) async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
-    return picked?.path;
-  }
+    if (picked == null) return null;
 
+    final path = picked.path;
+
+    final status = await _channel.invokeMethod<String>('checkGps', {'path': path});
+    if (status == 'FAKE') {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text("Missing coordinates"),
+          content: const Text(
+              "Your device did not save coordinates or removed them from the photo. Add current coordinates?"),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text("No")),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text("Yes")),
+          ],
+        ),
+      );
+
+      if (confirm == true) {
+        final pos = await Geolocator.getCurrentPosition();
+        await addGps(path: path, latitude: pos.latitude, longitude: pos.longitude);
+      }
+    }
+
+    return path;
+  }
+  
   static Future<bool> addGps({
     required String path,
     required double latitude,
@@ -60,6 +79,14 @@ class CameraWithGps {
     final dynamic result = await _channel.invokeMethod(
       'convertPhoto',
       {'path': path, 'latitude': latitude, 'longitude': longitude},
+    );
+    return result == true || (result is String && result.isNotEmpty);
+  }
+
+  static Future<bool> removeGps({required String path}) async {
+    final dynamic result = await _channel.invokeMethod(
+      'convertPhoto',
+      {'path': path},
     );
     return result == true || (result is String && result.isNotEmpty);
   }
