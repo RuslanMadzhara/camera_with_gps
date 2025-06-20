@@ -70,7 +70,6 @@ class CameraWithGps {
       }
 
       // Check GPS after path is obtained
-      if (path != null) {
         final status = await _channel.invokeMethod<String>('checkGps', {'path': path});
         if (status == 'FAKE') {
           final confirm = await showDialog<bool>(
@@ -95,7 +94,7 @@ class CameraWithGps {
             await addGps(path: path, latitude: pos.latitude, longitude: pos.longitude);
           }
         }
-      }
+
 
       return path;
     } else {
