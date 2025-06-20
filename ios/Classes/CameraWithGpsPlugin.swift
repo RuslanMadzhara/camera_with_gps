@@ -2,6 +2,7 @@ import Flutter
 import UIKit
 import ImageIO
 import MobileCoreServices
+import Photos
 
 public class CameraWithGpsPlugin: NSObject, FlutterPlugin {
   public static func register(with registrar: FlutterPluginRegistrar) {
@@ -10,8 +11,18 @@ public class CameraWithGpsPlugin: NSObject, FlutterPlugin {
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-    guard call.method == "convertPhoto",
-          let args = call.arguments as? [String: Any],
+    switch call.method {
+    case "convertPhoto":
+      handleConvertPhoto(call, result: result)
+    case "checkGps":
+      handleCheckGps(call, result: result)
+    default:
+      result(FlutterMethodNotImplemented)
+    }
+  }
+
+  private func handleConvertPhoto(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard let args = call.arguments as? [String: Any],
           let path = args["path"] as? String else {
       return result(FlutterError(code: "INVALID_ARGS", message: "Expected path", details: nil))
     }
@@ -90,5 +101,41 @@ public class CameraWithGpsPlugin: NSObject, FlutterPlugin {
     } catch {
       return false
     }
+  }
+
+  private func handleCheckGps(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard let args = call.arguments as? [String: Any],
+          let path = args["path"] as? String else {
+      return result("ERROR")
+    }
+
+    let url = URL(fileURLWithPath: path)
+
+    guard let data = try? Data(contentsOf: url),
+          let source = CGImageSourceCreateWithData(data as CFData, nil),
+          let metadata = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] else {
+      return result("ERROR")
+    }
+
+    // Check if GPS data exists and is valid
+    if let gps = metadata["{GPS}"] as? [String: Any],
+       let lat = gps["Latitude"] as? Double,
+       let lon = gps["Longitude"] as? Double {
+
+      // Check if coordinates are (0,0) which might indicate fake GPS data
+      if lat == 0.0 && lon == 0.0 {
+        return result("FAKE")
+      }
+
+      // Check if date is 1970-01-01 which might indicate fake GPS data
+      if let dateStamp = gps["DateStamp"] as? String, dateStamp == "1970:01:01" {
+        return result("FAKE")
+      }
+
+      return result("OK")
+    }
+
+    // No GPS data found
+    return result("FAKE")
   }
 }
