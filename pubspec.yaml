@@ -1,6 +1,6 @@
 name: camera_with_gps
 description: A Flutter plugin for capturing photos with embedded GPS metadata.
-version: 1.1.1
+version: 1.1.2
 homepage: https://github.com/RuslanMadzhara/camera_with_gps
 repository: https://github.com/RuslanMadzhara/camera_with_gps
 
