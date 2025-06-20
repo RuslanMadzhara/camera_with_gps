@@ -1,4 +1,4 @@
-## 1.1.1 - 2025-06-19 
+## 1.1.2 - 2025-06-19 
  - "Update Android build configs: adjust minSdkVersion for example app and plugin to maintain compatibility"
 ## 1.1.1 - 2025-06-18 
  - **Refactor CameraPreviewPage:**
