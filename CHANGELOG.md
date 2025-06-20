@@ -1,6 +1,8 @@
 ## 1.1.0 - 2025-06-18 
  - **Refactor CameraPreviewPage:**
   - Add orientation-aware UI, optimize GPS handling, and improve photo cropping/rotation logic"
+  - "Add device detection using `device_info_plus` for Samsung-specific gallery handling, 
+  - refine GPS checks, and update orientation-aware UI with enhanced margin adjustments"
 ## 0.2.0 - 2025-06-13
 - **Integrate permission_handler package and update configurations**
   - Added `permission_handler` dependency in `pubspec.yaml` and example project

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/services.dart';
@@ -39,78 +41,71 @@ class CameraWithGps {
 
   static Future<String?> pickFromGallery(BuildContext context) async {
     String? path;
+    if (Platform.isAndroid) {
+      final deviceInfo = await DeviceInfoPlugin().androidInfo;
+      final brand = (deviceInfo.brand).toLowerCase();
+      final manufacturer = (deviceInfo.manufacturer).toLowerCase();
+      final model = (deviceInfo.model).toLowerCase();
 
-    // Check if device is Android
-    final deviceInfo = DeviceInfoPlugin();
-    if (await _isSamsungSeries(deviceInfo)) {
-      // For Samsung S-series devices, use the file system picker
-      try {
-        path = await _channel.invokeMethod<String>('openDocumentImage');
-        if (path == null) return null;
-      } catch (e) {
-        print('Error opening document picker: $e');
-        // Fallback to image_picker if there's an error
+      final isSamsung = brand.contains('samsung') ||
+          manufacturer.contains('samsung') ||
+          model.startsWith('sm-');
+
+      if (isSamsung) {
+        try {
+          path = await _channel.invokeMethod<String>('openDocumentImage');
+          if (path == null) return null;
+        } catch (e) {
+          debugPrint('❌ Error opening document picker: $e');
+          final picker = ImagePicker();
+          final picked = await picker.pickImage(source: ImageSource.gallery);
+          if (picked == null) return null;
+          path = picked.path;
+        }
+      } else {
         final picker = ImagePicker();
         final picked = await picker.pickImage(source: ImageSource.gallery);
         if (picked == null) return null;
         path = picked.path;
       }
+
+      // Check GPS after path is obtained
+      if (path != null) {
+        final status = await _channel.invokeMethod<String>('checkGps', {'path': path});
+        if (status == 'FAKE') {
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text("Missing coordinates"),
+              content: const Text(
+                  "Your device did not save coordinates or removed them from the photo. Add current coordinates?"),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text("No")),
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text("Yes")),
+              ],
+            ),
+          );
+
+          if (confirm == true) {
+            final pos = await Geolocator.getCurrentPosition();
+            await addGps(path: path, latitude: pos.latitude, longitude: pos.longitude);
+          }
+        }
+      }
+
+      return path;
     } else {
-      // For all other devices, use image_picker
+      // iOS or other platforms
       final picker = ImagePicker();
       final picked = await picker.pickImage(source: ImageSource.gallery);
-      if (picked == null) return null;
-      path = picked.path;
-    }
-
-    // Check GPS data and handle as before
-    final status = await _channel.invokeMethod<String>('checkGps', {'path': path});
-    if (status == 'FAKE') {
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text("Missing coordinates"),
-          content: const Text(
-              "Your device did not save coordinates or removed them from the photo. Add current coordinates?"),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text("No")),
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text("Yes")),
-          ],
-        ),
-      );
-
-      if (confirm == true) {
-        final pos = await Geolocator.getCurrentPosition();
-        await addGps(path: path, latitude: pos.latitude, longitude: pos.longitude);
-      }
-    }
-
-    return path;
-  }
-
-  // Helper method to check if device is a Samsung S-series
-  static Future<bool> _isSamsungSeries(DeviceInfoPlugin deviceInfo) async {
-    try {
-      final androidInfo = await deviceInfo.androidInfo;
-      final manufacturer = androidInfo.manufacturer?.toLowerCase() ?? '';
-      final model = androidInfo.model ?? '';
-
-      // Check if it's a Samsung device
-      if (manufacturer.contains('samsung')) {
-        // Check if it's an S-series model
-        return model.startsWith('SM-S') || 
-               model.toLowerCase().contains('galaxy s');
-      }
-      return false;
-    } catch (e) {
-      print('Error checking device info: $e');
-      return false;
+      return picked?.path;
     }
   }
+
 
   static Future<bool> addGps({
     required String path,

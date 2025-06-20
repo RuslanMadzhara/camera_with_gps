@@ -5,7 +5,6 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
 
 import 'camera_with_gps.dart';
@@ -453,7 +452,10 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
       case DeviceOrientation.landscapeRight:
         return Align(
             alignment: Alignment.centerRight,
-            child: Container(width: 72, color: Colors.black38, child: landscapeCol));
+            child: Container(width: 72,
+                margin: const EdgeInsets.only(top: 16, bottom: 16, right: 50),
+                color: Colors.black38, child: landscapeCol));
+
       default:
         return const SizedBox.shrink();
     }
@@ -464,8 +466,7 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         _RotIcon(orientation: _ori, icon: Icons.photo_library, onPressed: _pickGallery),
-        GestureDetector(
-            onTap: _busy ? null : _shoot, child: _Shutter(busy: _busy)),
+        GestureDetector(onTap: _busy ? null : _shoot, child: _Shutter(busy: _busy)),
         _RotIcon(orientation: _ori, icon: Icons.cameraswitch, onPressed: _switchCam),
       ],
     );
@@ -474,8 +475,7 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         _RotIcon(orientation: _ori, icon: Icons.photo_library, onPressed: _pickGallery),
-        GestureDetector(
-            onTap: _busy ? null : _shoot, child: _Shutter(busy: _busy)),
+        GestureDetector(onTap: _busy ? null : _shoot, child: _Shutter(busy: _busy)),
         _RotIcon(orientation: _ori, icon: Icons.cameraswitch, onPressed: _switchCam),
       ],
     );
@@ -493,22 +493,29 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
             ),
           ),
         );
+
       case DeviceOrientation.landscapeLeft:
         return Align(
-            alignment: Alignment.centerRight,
-            child: Container(
-                width: 72,
-                color: Colors.black38,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: side));
+          alignment: Alignment.centerRight,
+          child: Container(
+            width: 72,
+            color: Colors.black38,
+            margin: const EdgeInsets.only(top: 16, bottom: 16, right: 50),
+            child: side,
+          ),
+        );
+
       case DeviceOrientation.landscapeRight:
         return Align(
-            alignment: Alignment.centerLeft,
-            child: Container(
-                width: 72,
-                color: Colors.black38,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: side));
+          alignment: Alignment.centerLeft,
+          child: Container(
+            width: 72,
+            color: Colors.black38,
+            margin: const EdgeInsets.only(top: 16, bottom: 16, left: 50),
+            child: side,
+          ),
+        );
+
       default:
         return const SizedBox.shrink();
     }

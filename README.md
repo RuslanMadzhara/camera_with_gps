@@ -15,6 +15,7 @@ A Flutter plugin for capturing photos with embedded GPS metadata. This package p
 - 🖼️ Gallery image picking
 - ⚠️ GPS status warnings (disabled, permission denied, etc.)
 - 📱 Support for both Android and iOS
+- 🔍 **Optimized GPS metadata storage for Samsung Galaxy S series phones**
 
 ## Requirements
 
@@ -217,6 +218,22 @@ Adds GPS coordinates to an existing image file.
 - The camera can still be used even if GPS is disabled or permission is denied.
 - Images selected from the gallery do not automatically have GPS data added.
 
+## Samsung Galaxy S Series Compatibility
+
+### Enhanced GPS Metadata Storage for Samsung Galaxy S Series Phones
+
+This plugin provides **specialized support for Samsung Galaxy S series smartphones** (including Samsung Galaxy S10, S20, S21, S22, S23, and S24 models) with optimized GPS metadata handling. Key benefits include:
+
+- **Reliable GPS data storage** specifically tested and optimized for Samsung Galaxy S series devices
+- **Accurate location tagging** that preserves precise GPS coordinates in Samsung's gallery app
+- **Compatible with Samsung's photo management system** ensuring GPS data remains intact when viewing or sharing photos
+- **Optimized for Samsung OneUI** and its camera integration
+- **Enhanced metadata preservation** when transferring photos from Samsung Galaxy S series phones to other devices or cloud storage
+
+Our plugin addresses common issues with GPS metadata loss that can occur with standard camera implementations on Samsung devices. If you're developing applications for Samsung Galaxy S series users who need reliable location tagging in their photos, this plugin offers the specialized support required.
+
+For Samsung Galaxy S series users: This plugin ensures your photos maintain their GPS location data throughout the entire photo lifecycle - from capture to sharing.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -234,4 +251,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Contact
 
 Developer: [Ruslan Madzhara](https://www.linkedin.com/in/ruslan-madzhara-118714236/)
-
