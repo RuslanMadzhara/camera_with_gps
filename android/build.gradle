@@ -8,7 +8,7 @@ android {
     namespace "camera_gps_plugin"
 
     defaultConfig {
-        minSdkVersion 23
+        minSdkVersion 21
         targetSdkVersion 33
     }
 
