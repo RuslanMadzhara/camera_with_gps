@@ -46,7 +46,7 @@ Add the following to your `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  camera_with_gps: ^1.1.0
+  camera_with_gps: ^2.0.0
 ```
 
 Then run:
@@ -217,6 +217,39 @@ Adds GPS coordinates to an existing image file.
 - Warning messages are displayed when GPS is disabled or permission is denied.
 - The camera can still be used even if GPS is disabled or permission is denied.
 - Images selected from the gallery do not automatically have GPS data added.
+
+## Architecture
+
+The plugin is designed with a modular architecture for better maintainability and testability:
+
+```
+lib/
+├── main.dart                    ← usual MyApp / routes
+│
+├── pages/
+│   └── camera_preview_page.dart ← stateful shell, holds controller & app-level state
+│
+├── services/
+│   └── orientation_service.dart ← singleton sensor stream
+│
+├── utils/
+│   └── photo_processor.dart     ← pure image/EXIF logic
+│
+└── widgets/
+    ├── rot_icon.dart            ← orientation-aware icon
+    ├── gps_banner.dart          ← GPS status warning
+    ├── top_bar.dart             ← camera controls (flash, ratio)
+    ├── bottom_bar.dart          ← camera controls (shutter, gallery, switch)
+    ├── preview_box.dart         ← camera preview with aspect ratio handling
+    ├── shutter_button.dart      ← camera shutter button with loading state
+    └── error_ui.dart            ← error display with retry option
+```
+
+This modular structure allows for:
+- Easier testing of individual components
+- Clear separation of concerns
+- Better code organization
+- Improved maintainability
 
 ## Samsung Galaxy S Series Compatibility
 

@@ -1,6 +1,24 @@
-## 1.1.5 - 2025-06-23
+## 2.0.0 - 2025-06-23
+- **Major refactoring of camera app structure:**
+  - Split monolithic file into small, testable components
+  - Created dedicated services, widgets, and utility classes
+  - Improved code organization with clear separation of concerns
+  - Enhanced maintainability and testability
+- **Fixed iOS photo rotation issue:**
+  - Corrected rotation angle for photos taken in landscape right orientation on iOS devices
+- **Updated code for better compatibility:**
+  - Replaced pattern matching switch expressions with traditional switch statements
+
+## 1.1.7 - 2025-06-22
+ - "Fix Android orientation detection issue where devices were always detecting landscapeLeft"
+ - "Improve image rotation logic for Android devices in landscape mode"
+
+## 1.1.6 - 2025-06-22
+ - "Fix Android photo orientation issue when taking photos in landscape-right orientation"
+
+## 1.1.5 - 2025-06-221
  - "Add `removeGps` method to handle GPS metadata removal and enable corresponding iOS build warning for quoted includes"
-## 1.1.4 - 2025-06-23
+## 1.1.4 - 2025-06-221
  - "Refactor GPS metadata handling: remove confirmation dialog for invalid coordinates, streamline EXIF parsing,
  - add `removeGps` method, and enhance gallery feature with detailed metadata display."
 ## 1.1.3 - 2025-06-20
