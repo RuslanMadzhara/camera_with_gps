@@ -14,8 +14,24 @@ public class CameraWithGpsPlugin: NSObject, FlutterPlugin {
     switch call.method {
     case "convertPhoto":
       handleConvertPhoto(call, result: result)
+
     case "checkGps":
       handleCheckGps(call, result: result)
+
+    case "removeGps":
+      if let args = call.arguments as? [String: Any],
+         let path = args["path"] as? String {
+        let removed = removeGps(from: path)
+        result(removed)
+      } else if let path = call.arguments as? String {
+        let removed = removeGps(from: path)
+        result(removed)
+      } else {
+        result(FlutterError(code: "INVALID_ARGS",
+                            message: "Expected path", details: nil))
+      }
+        // ─────────────────────────────────────────
+
     default:
       result(FlutterMethodNotImplemented)
     }

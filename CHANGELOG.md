@@ -1,3 +1,5 @@
+## 1.1.5 - 2025-06-23
+ - "Add `removeGps` method to handle GPS metadata removal and enable corresponding iOS build warning for quoted includes"
 ## 1.1.4 - 2025-06-23
  - "Refactor GPS metadata handling: remove confirmation dialog for invalid coordinates, streamline EXIF parsing,
  - add `removeGps` method, and enhance gallery feature with detailed metadata display."
