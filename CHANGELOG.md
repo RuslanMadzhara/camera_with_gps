@@ -1,3 +1,6 @@
+## 1.1.4 - 2025-06-23
+ - "Refactor GPS metadata handling: remove confirmation dialog for invalid coordinates, streamline EXIF parsing,
+ - add `removeGps` method, and enhance gallery feature with detailed metadata display."
 ## 1.1.3 - 2025-06-20
  - "Fix crash on launch in release APK by adding ProGuard rules to prevent obfuscation of critical classes"
 ## 1.1.2 - 2025-06-19 

@@ -72,27 +72,9 @@ class CameraWithGps {
       // Check GPS after path is obtained
         final status = await _channel.invokeMethod<String>('checkGps', {'path': path});
         if (status == 'FAKE') {
-          final confirm = await showDialog<bool>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: const Text("Missing coordinates"),
-              content: const Text(
-                  "Your device did not save coordinates or removed them from the photo. Add current coordinates?"),
-              actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    child: const Text("No")),
-                TextButton(
-                    onPressed: () => Navigator.pop(ctx, true),
-                    child: const Text("Yes")),
-              ],
-            ),
-          );
-
-          if (confirm == true) {
-            final pos = await Geolocator.getCurrentPosition();
-            await addGps(path: path, latitude: pos.latitude, longitude: pos.longitude);
-          }
+          // Remove GPS metadata if coordinates are invalid (0,0,0)
+        await removeGps(path: path);
+        } else {
         }
 
 
@@ -120,7 +102,7 @@ class CameraWithGps {
 
   static Future<bool> removeGps({required String path}) async {
     final dynamic result = await _channel.invokeMethod(
-      'convertPhoto',
+      'removeGps',
       {'path': path},
     );
     return result == true || (result is String && result.isNotEmpty);

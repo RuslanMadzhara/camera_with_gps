@@ -21,6 +21,10 @@ class CameraWithGpsPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Acti
     private var activity: Activity? = null
     private var pendingResult: MethodChannel.Result? = null
 
+    // ─────────────────────────────────────────────────────────────
+    //  Flutter lifecycle
+    // ─────────────────────────────────────────────────────────────
+
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         context = binding.applicationContext
         channel = MethodChannel(binding.binaryMessenger, "camera_with_gps")
@@ -70,6 +74,7 @@ class CameraWithGpsPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Acti
         onDetachedFromActivity()
     }
 
+
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "convertPhoto" -> {
@@ -101,9 +106,7 @@ class CameraWithGpsPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Acti
                 }
             }
 
-            "openDocumentImage" -> {
-                openDocumentImage(result)
-            }
+            "openDocumentImage" -> openDocumentImage(result)
 
             "checkGps" -> {
                 val path = call.argument<String>("path")
@@ -112,48 +115,76 @@ class CameraWithGpsPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Acti
                 } else {
                     val isFakeGps = containsFakeSamsungGps(path)
 
-                    // Extract GPS coordinates from the image EXIF data
-                    var latValue: String? = null
-                    var lonValue: String? = null
-                    try {
-                        val exif = ExifInterface(path)
-                        latValue = exif.getAttribute(ExifInterface.TAG_GPS_LATITUDE)
-                        lonValue = exif.getAttribute(ExifInterface.TAG_GPS_LONGITUDE)
-                    } catch (e: IOException) {
-                        e.printStackTrace()
+
+                    val exif = try { ExifInterface(path) } catch (e: IOException) {
+                        e.printStackTrace(); null
                     }
 
-                    // Check if coordinates are missing or zero
-                    val isZeroCoords = (latValue == "0/1,0/1,0/1000" && lonValue == "0/1,0/1,0/1000")
-                    val isMissingCoords = (latValue == null || lonValue == null)
+                    val latValue = exif?.getAttribute(ExifInterface.TAG_GPS_LATITUDE)
+                    val lonValue = exif?.getAttribute(ExifInterface.TAG_GPS_LONGITUDE)
 
-                    result.success(if (isFakeGps || isZeroCoords || isMissingCoords) "FAKE" else "OK")
+                    val latDec = dmsToDecimal(latValue)
+                    val lonDec = dmsToDecimal(lonValue)
+
+                    val isZeroCoords    = isApproximatelyZero(latDec) && isApproximatelyZero(lonDec)
+                    val isMissingCoords = latDec == null || lonDec == null
+
+                    val status = if (isFakeGps || isZeroCoords || isMissingCoords) "FAKE" else "OK"
+                    result.success(status)
                 }
+            }
+
+            "removeGps" -> {
+                val path = call.argument<String>("path")
+                if (path == null) {
+                    result.error("INVALID_ARGS", "Expected path", null)
+                    return
+                }
+                val success = removeGps(path)
+                result.success(success)
             }
 
             else -> result.notImplemented()
         }
     }
 
-    private fun openDocumentImage(result: MethodChannel.Result) {
-        val act = activity
-        if (act == null) {
-            result.error("NO_ACTIVITY", "Activity not available", null)
-            return
+    // ─────────────────────────────────────────────────────────────
+    //  GPS helpers
+    // ─────────────────────────────────────────────────────────────
+
+
+    private fun dmsToDecimal(dms: String?): Double? {
+        if (dms.isNullOrBlank()) return null
+        val parts = dms.split(",")
+        if (parts.size != 3) return null
+        fun frac(r: String) = r.split("/").let { it[0].toDouble() / it[1].toDouble() }
+
+        return try {
+            val deg = frac(parts[0])
+            val min = frac(parts[1])
+            val sec = frac(parts[2])
+            deg + min / 60 + sec / 3600
+        } catch (e: Exception) {
+            null
         }
-
-        pendingResult = result
-
-        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE)
-            type = "image/*"
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
-            addFlags(Intent.FLAG_GRANT_PREFIX_URI_PERMISSION)
-        }
-
-        act.startActivityForResult(intent, 999)
     }
+
+
+    private fun isApproximatelyZero(value: Double?, eps: Double = 1e-6): Boolean =
+        value != null && abs(value) < eps
+
+
+    private fun convertToDMS(coordinate: Double): String {
+        val absCoord = abs(coordinate)
+        val degrees = absCoord.toInt()
+        val minutes = ((absCoord - degrees) * 60).toInt()
+        val seconds = ((((absCoord - degrees) * 60) - minutes) * 60 * 1000).toInt()
+        return "$degrees/1,$minutes/1,$seconds/1000"
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  EXIF operations
+    // ─────────────────────────────────────────────────────────────
 
     private fun addGps(filePath: String, latitude: Double, longitude: Double): Boolean {
         val file = File(filePath)
@@ -202,23 +233,48 @@ class CameraWithGpsPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Acti
         }
     }
 
-    private fun convertToDMS(coordinate: Double): String {
-        val absCoord = abs(coordinate)
-        val degrees = absCoord.toInt()
-        val minutes = ((absCoord - degrees) * 60).toInt()
-        val seconds = ((((absCoord - degrees) * 60) - minutes) * 60 * 1000).toInt()
-        return "$degrees/1,$minutes/1,$seconds/1000"
-    }
 
     private fun containsFakeSamsungGps(filePath: String): Boolean {
         return try {
             val exif = ExifInterface(filePath)
-            val lat = exif.getAttribute(ExifInterface.TAG_GPS_LATITUDE)
-            val lon = exif.getAttribute(ExifInterface.TAG_GPS_LONGITUDE)
-            val date = exif.getAttribute(ExifInterface.TAG_GPS_DATESTAMP)
-            (lat == "0/1,0/1,0/1000" && lon == "0/1,0/1,0/1000") || date == "1970:01:01"
+
+            val latStr = exif.getAttribute(ExifInterface.TAG_GPS_LATITUDE)
+            val lonStr = exif.getAttribute(ExifInterface.TAG_GPS_LONGITUDE)
+            val date   = exif.getAttribute(ExifInterface.TAG_GPS_DATESTAMP)
+
+            val latDec = dmsToDecimal(latStr)
+            val lonDec = dmsToDecimal(lonStr)
+
+            val coordsMissing = latDec == null || lonDec == null
+            val coordsZero    = isApproximatelyZero(latDec) && isApproximatelyZero(lonDec)
+            val oldDate       = date == "1970:01:01"
+
+            coordsMissing || coordsZero || oldDate
         } catch (e: IOException) {
             false
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  Android SAF helper
+    // ─────────────────────────────────────────────────────────────
+
+    private fun openDocumentImage(result: MethodChannel.Result) {
+        val act = activity ?: run {
+            result.error("NO_ACTIVITY", "Activity not available", null)
+            return
+        }
+
+        pendingResult = result
+
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "image/*"
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+            addFlags(Intent.FLAG_GRANT_PREFIX_URI_PERMISSION)
+        }
+
+        act.startActivityForResult(intent, 999)
     }
 }

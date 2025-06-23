@@ -49,5 +49,10 @@
     <string>We need camera access to take photos</string>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>We need your location to embed GPS coordinates into photos</string>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+    </dict>
 </dict>
 </plist>
