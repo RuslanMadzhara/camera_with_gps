@@ -1,3 +1,8 @@
+## 2.1.0 - 2025-11-10
+- **Refactor file structure for better modularity: move services, widgets, and utils to dedicated directories;
+- remove unused `camera_preview_page.dart` 
+- implementation; enhance gallery feature with configurable toggle;
+- update package references; and bump version to 2.1.0.
 ## 2.0.0 - 2025-06-23
 - **Major refactoring of camera app structure:**
   - Split monolithic file into small, testable components
