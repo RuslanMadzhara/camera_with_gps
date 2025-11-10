@@ -5,7 +5,6 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
 
 import 'camera_with_gps.dart';
@@ -29,12 +28,12 @@ class _RotIcon extends StatelessWidget {
     int turns;
     switch (orientation) {
       case DeviceOrientation.landscapeLeft:
-        turns = 1;   // +90°
+        turns = 1; // +90°
         break;
       case DeviceOrientation.landscapeRight:
-        turns = 3;   // −90° (270°)
+        turns = 3; // −90° (270°)
         break;
-      default: // portraitUp та інші
+      default: // portraitUp and others
         turns = 0;
     }
 
@@ -55,25 +54,33 @@ class _GpsBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SafeArea(
-    child: Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(top: 16),
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      color: const Color.fromRGBO(255, 0, 0, 0.8),
+        child: Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(top: 16),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          color: const Color.fromRGBO(255, 0, 0, 0.8),
           child: Text(
             message,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-            color: Colors.white, fontWeight: FontWeight.bold),
-      ),
-    ),
-  );
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      );
 }
 
 /* ───────────────── main page ───────────────── */
 class CameraPreviewPage extends StatefulWidget {
-  const CameraPreviewPage({super.key, required this.cameras});
+  const CameraPreviewPage({
+    super.key,
+    required this.cameras,
+    this.allowGallery = true, // allow or hide the gallery button in UI
+  });
+
   final List<CameraDescription> cameras;
+  final bool allowGallery;
 
   @override
   State<CameraPreviewPage> createState() => _CameraPreviewPageState();
@@ -156,8 +163,8 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
 
   bool get _canGps =>
       _gpsOn &&
-          (_gpsPerm == LocationPermission.always ||
-              _gpsPerm == LocationPermission.whileInUse);
+      (_gpsPerm == LocationPermission.always ||
+          _gpsPerm == LocationPermission.whileInUse);
 
   String? _gpsMsg() {
     if (!_gpsOn) return 'GPS is disabled…';
@@ -198,17 +205,17 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
           _flash = false;
         }
       }
-    if (mounted) setState(() => _ready = true);
+      if (mounted) setState(() => _ready = true);
     } catch (e) {
-    if (!mounted) return;
-    setState(() {
-    _err = 'Failed to initialise camera: $e';
-    _ready = false;
-    });
+      if (!mounted) return;
+      setState(() {
+        _err = 'Failed to initialise camera: $e';
+        _ready = false;
+      });
     }
   }
 
-/* ───────── actions ───────── */
+  /* ───────── actions ───────── */
   Future<void> _shoot() async {
     if (_busy || !_ready) return;
     setState(() => _busy = true);
@@ -220,53 +227,37 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
       final originalImage = img.decodeImage(imageBytes);
 
       if (originalImage != null) {
-        // First, rotate the image if in landscape mode
+        // Rotate/crop based on current orientation and desired ratio
         img.Image processedImage = originalImage;
 
-        // Check if running on iOS
         final bool isIOS = Platform.isIOS;
 
-        // Explicitly rotate the image based on device orientation
         if (_ori == DeviceOrientation.landscapeLeft) {
-          // Rotate 270 degrees clockwise (90 + 180 for the additional rotation)
           processedImage = img.copyRotate(originalImage, angle: 270);
-          // Additional 90 degree rotation for iOS in landscape mode
-          if (isIOS) {
-            processedImage = img.copyRotate(processedImage, angle: 90);
-          }
+          if (isIOS) processedImage = img.copyRotate(processedImage, angle: 90);
         } else if (_ori == DeviceOrientation.landscapeRight) {
-          // Rotate 90 degrees clockwise (270 + 180 = 450, which is equivalent to 90 degrees)
           processedImage = img.copyRotate(originalImage, angle: 90);
-          // Additional 90 degree rotation for iOS in landscape mode
-          if (isIOS) {
-            processedImage = img.copyRotate(processedImage, angle: 90);
-          }
+          if (isIOS) processedImage = img.copyRotate(processedImage, angle: 90);
         }
 
         final height = processedImage.height;
         final width = processedImage.width;
 
-        // Determine if the image should be treated as portrait based on device orientation
-        final bool isPortraitImage = _ori == DeviceOrientation.portraitUp ? true : false;
+        final bool isPortraitImage = _ori == DeviceOrientation.portraitUp;
 
-        double desiredRatio;
-        if (_fourThree) {
-          desiredRatio = isPortraitImage ? 3 / 4 : 4 / 3;
-        } else {
-          desiredRatio = isPortraitImage ? 9 / 16 : 16 / 9;
-        }
+        final double desiredRatio = _fourThree
+            ? (isPortraitImage ? 3 / 4 : 4 / 3)
+            : (isPortraitImage ? 9 / 16 : 16 / 9);
 
-        // Calculate the ratio based on orientation
         final imageRatio = width / height;
         const epsilon = 0.01;
         if ((imageRatio - desiredRatio).abs() < epsilon) {
-          // No cropping needed, just save the rotated image
           final rotatedBytes = img.encodeJpg(processedImage);
           await File(file.path).writeAsBytes(rotatedBytes);
         } else {
           int cropWidth, cropHeight;
 
-          // iOS-specific cropping logic for landscape mode
+          // Special casing for iOS landscape if needed
           if (isIOS && !isPortraitImage) {
             if (imageRatio > desiredRatio) {
               cropWidth = width;
@@ -276,7 +267,6 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
               cropWidth = (height * desiredRatio).round();
             }
           } else {
-            // Standard cropping logic for Android and iOS portrait
             if (imageRatio > desiredRatio) {
               cropHeight = height;
               cropWidth = (height * desiredRatio).round();
@@ -306,16 +296,18 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
         try {
           final p = await Geolocator.getCurrentPosition();
           await CameraWithGps.addGps(
-              path: file.path, latitude: p.latitude, longitude: p.longitude);
+            path: file.path,
+            latitude: p.latitude,
+            longitude: p.longitude,
+          );
         } catch (_) {}
       }
 
       if (mounted) Navigator.pop(context, file.path);
-
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Capture error: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Capture error: $e')));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -325,8 +317,9 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
   Future<void> _switchCam() async {
     if (!_ready) return;
     final cur = widget.cameras[_camIdx];
-    final next = widget.cameras
-        .firstWhere((c) => c.lensDirection != cur.lensDirection, orElse: () => cur);
+    final next = widget.cameras.firstWhere(
+        (c) => c.lensDirection != cur.lensDirection,
+        orElse: () => cur);
     if (next == cur) return;
     setState(() => _ready = false);
     await _ctl.dispose();
@@ -342,17 +335,20 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
       setState(() => _flash = !_flash);
     } catch (_) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Flash not available on this camera')));
+        const SnackBar(content: Text('Flash not available on this camera')),
+      );
     }
   }
 
   Future<void> _pickGallery() async {
+    if (!widget.allowGallery) return; // guard if somehow triggered
     try {
-      final img = await ImagePicker().pickImage(source: ImageSource.gallery);
-      if (img == null) return;
-      // Don't add GPS data to photos selected from the gallery
-      if (mounted) Navigator.pop(context, img.path);
+      final path = await CameraWithGps.pickFromGallery();
+      if (path == null) return;
+      // Do not add GPS to gallery images
+      if (mounted) Navigator.pop(context, path);
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Gallery error: $e')));
     }
@@ -375,7 +371,7 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
       ),
     );
 
-    // For portrait orientation
+    // Portrait layout
     final portraitCol = Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -398,7 +394,7 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
       ],
     );
 
-    // For landscape orientation
+    // Landscape layout
     final landscapeCol = Column(
       mainAxisAlignment: MainAxisAlignment.start,
       children: [
@@ -430,35 +426,48 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
         );
       case DeviceOrientation.landscapeLeft:
         return Align(
-            alignment: Alignment.centerLeft,
-            child: Container(width: 72, color: Colors.black38, child: landscapeCol));
+          alignment: Alignment.centerLeft,
+          child:
+              Container(width: 72, color: Colors.black38, child: landscapeCol),
+        );
       case DeviceOrientation.landscapeRight:
         return Align(
-            alignment: Alignment.centerRight,
-            child: Container(width: 72, color: Colors.black38, child: landscapeCol));
+          alignment: Alignment.centerRight,
+          child:
+              Container(width: 72, color: Colors.black38, child: landscapeCol),
+        );
       default:
         return const SizedBox.shrink();
     }
   }
 
   Widget _bottomBar() {
+    final galleryBtn = _RotIcon(
+      orientation: _ori,
+      icon: Icons.photo_library,
+      onPressed: widget.allowGallery ? _pickGallery : null,
+    );
+
     final portrait = Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _RotIcon(orientation: _ori, icon: Icons.photo_library, onPressed: _pickGallery),
+        // Keep layout stable when gallery is hidden
+        widget.allowGallery ? galleryBtn : const SizedBox(width: 48),
         GestureDetector(
             onTap: _busy ? null : _shoot, child: _Shutter(busy: _busy)),
-        _RotIcon(orientation: _ori, icon: Icons.cameraswitch, onPressed: _switchCam),
+        _RotIcon(
+            orientation: _ori, icon: Icons.cameraswitch, onPressed: _switchCam),
       ],
     );
 
     final side = Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _RotIcon(orientation: _ori, icon: Icons.photo_library, onPressed: _pickGallery),
+        widget.allowGallery ? galleryBtn : const SizedBox(height: 48),
         GestureDetector(
             onTap: _busy ? null : _shoot, child: _Shutter(busy: _busy)),
-        _RotIcon(orientation: _ori, icon: Icons.cameraswitch, onPressed: _switchCam),
+        _RotIcon(
+            orientation: _ori, icon: Icons.cameraswitch, onPressed: _switchCam),
       ],
     );
 
@@ -477,20 +486,24 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
         );
       case DeviceOrientation.landscapeLeft:
         return Align(
-            alignment: Alignment.centerRight,
-            child: Container(
-                width: 72,
-                color: Colors.black38,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: side));
+          alignment: Alignment.centerRight,
+          child: Container(
+            width: 72,
+            color: Colors.black38,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: side,
+          ),
+        );
       case DeviceOrientation.landscapeRight:
         return Align(
-            alignment: Alignment.centerLeft,
-            child: Container(
-                width: 72,
-                color: Colors.black38,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: side));
+          alignment: Alignment.centerLeft,
+          child: Container(
+            width: 72,
+            color: Colors.black38,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: side,
+          ),
+        );
       default:
         return const SizedBox.shrink();
     }
@@ -521,10 +534,11 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
 
 /* ───────────────── preview (letter-box) ───────────────── */
 class _Preview extends StatelessWidget {
-  const _Preview(
-      {required this.ctrl,
-        required this.ori,
-        required this.fourThree});
+  const _Preview({
+    required this.ctrl,
+    required this.ori,
+    required this.fourThree,
+  });
 
   final CameraController ctrl;
   final DeviceOrientation ori;
@@ -540,7 +554,7 @@ class _Preview extends StatelessWidget {
 
     if (ori == DeviceOrientation.portraitUp) {
       final screenW = MediaQuery.of(context).size.width;
-      final previewH = screenW * wantRatio; // ширина * (H/W) = W·R
+      final previewH = screenW * wantRatio;
 
       return Center(
         child: ClipRect(
@@ -549,14 +563,15 @@ class _Preview extends StatelessWidget {
             height: previewH,
             child: FittedBox(
               fit: BoxFit.cover,
-              child: SizedBox(width: rawW, height: rawH, child: CameraPreview(ctrl)),
+              child: SizedBox(
+                  width: rawW, height: rawH, child: CameraPreview(ctrl)),
             ),
           ),
         ),
       );
     } else {
       final screenH = MediaQuery.of(context).size.height;
-      final previewW = screenH * wantRatio; // портрет-інвертоване ratio
+      final previewW = screenH * wantRatio;
 
       return Center(
         child: ClipRect(
@@ -565,7 +580,11 @@ class _Preview extends StatelessWidget {
             height: screenH,
             child: FittedBox(
               fit: BoxFit.cover,
-              child: SizedBox(width: sensor.width, height: sensor.height, child: CameraPreview(ctrl)),
+              child: SizedBox(
+                width: sensor.width,
+                height: sensor.height,
+                child: CameraPreview(ctrl),
+              ),
             ),
           ),
         ),
@@ -580,16 +599,16 @@ class _Shutter extends StatelessWidget {
   final bool busy;
   @override
   Widget build(BuildContext context) => Container(
-    width: 72,
-    height: 72,
-    decoration: BoxDecoration(
-      color: busy ? Colors.white54 : Colors.white,
-      shape: BoxShape.circle,
-    ),
-    child: busy
-        ? const Center(child: CircularProgressIndicator())
-        : const Icon(Icons.camera_alt, color: Colors.black),
-  );
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          color: busy ? Colors.white54 : Colors.white,
+          shape: BoxShape.circle,
+        ),
+        child: busy
+            ? const Center(child: CircularProgressIndicator())
+            : const Icon(Icons.camera_alt, color: Colors.black),
+      );
 }
 
 /* ───────────────── error ───────────────── */
@@ -599,15 +618,17 @@ class _ErrorUi extends StatelessWidget {
   final VoidCallback retry;
   @override
   Widget build(BuildContext context) => Center(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(msg,
-            style: const TextStyle(color: Colors.white),
-            textAlign: TextAlign.center),
-        const SizedBox(height: 16),
-        ElevatedButton(onPressed: retry, child: const Text('Retry')),
-      ],
-    ),
-  );
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              msg,
+              style: const TextStyle(color: Colors.white),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: retry, child: const Text('Retry')),
+          ],
+        ),
+      );
 }
