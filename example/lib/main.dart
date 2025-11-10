@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:camera_with_gps/camera_with_gps.dart';
+import 'package:camera_with_gps/services/camera_with_gps.dart';
 import 'package:exif/exif.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;

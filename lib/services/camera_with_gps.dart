@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 
-import 'camera_preview_page.dart';
+import '../pages/camera_preview_page.dart';
 
 class CameraWithGps {
   static const MethodChannel _channel = MethodChannel('camera_with_gps');

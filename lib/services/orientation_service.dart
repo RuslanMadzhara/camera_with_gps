@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:native_device_orientation/native_device_orientation.dart';
 

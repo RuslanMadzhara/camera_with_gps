@@ -1,27 +1,35 @@
 import 'dart:async';
+
 import 'package:camera/camera.dart';
-import 'package:camera_with_gps/camera_with_gps.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../services/camera_with_gps.dart';
 import '../services/orientation_service.dart';
 import '../utils/photo_processor.dart';
+import '../widgets/bottom_bar.dart';
+import '../widgets/error_ui.dart';
+import '../widgets/gps_banner.dart';
 import '../widgets/preview_box.dart';
 import '../widgets/top_bar.dart';
-import '../widgets/bottom_bar.dart';
-import '../widgets/gps_banner.dart';
-import '../widgets/error_ui.dart';
 
 class CameraPreviewPage extends StatefulWidget {
-  const CameraPreviewPage({super.key, required this.cameras});
+  const CameraPreviewPage({
+    super.key,
+    required this.cameras,
+    this.allowGallery = true, // new: toggle gallery button in the UI
+  });
+
   final List<CameraDescription> cameras;
+  final bool allowGallery;
 
   @override
   State<CameraPreviewPage> createState() => _CameraPreviewPageState();
 }
 
-class _CameraPreviewPageState extends State<CameraPreviewPage> with WidgetsBindingObserver {
+class _CameraPreviewPageState extends State<CameraPreviewPage>
+    with WidgetsBindingObserver {
   /* camera */
   late CameraController _ctl;
   int _camIdx = 0;
@@ -48,7 +56,7 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> with WidgetsBindi
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    SystemChrome.setPreferredOrientations([
+    SystemChrome.setPreferredOrientations(const [
       DeviceOrientation.portraitUp,
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
@@ -89,12 +97,14 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> with WidgetsBindi
 
   bool get _canGps =>
       _gpsOn &&
-      (_gpsPerm == LocationPermission.always || _gpsPerm == LocationPermission.whileInUse);
+      (_gpsPerm == LocationPermission.always ||
+          _gpsPerm == LocationPermission.whileInUse);
 
   String? _gpsMsg() {
     if (!_gpsOn) return 'GPS is disabled…';
     if (_gpsPerm == LocationPermission.denied) return 'GPS permission denied…';
-    if (_gpsPerm == LocationPermission.deniedForever) return 'GPS permission permanently denied…';
+    if (_gpsPerm == LocationPermission.deniedForever)
+      return 'GPS permission permanently denied…';
     return null;
   }
 
@@ -153,7 +163,8 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> with WidgetsBindi
       if (mounted) Navigator.pop(context, shot.path);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Capture error: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Capture error: $e')));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -167,7 +178,8 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> with WidgetsBindi
       try {
         final p = await Geolocator.getCurrentPosition();
         if (p.latitude != 0.0 || p.longitude != 0.0) {
-          await CameraWithGps.addGps(path: path, latitude: p.latitude, longitude: p.longitude);
+          await CameraWithGps.addGps(
+              path: path, latitude: p.latitude, longitude: p.longitude);
         } else {
           await CameraWithGps.removeGps(path: path);
         }
@@ -181,8 +193,9 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> with WidgetsBindi
     if (!_ready) return;
     final cur = widget.cameras[_camIdx];
     final next = widget.cameras.firstWhere(
-        (c) => c.lensDirection != cur.lensDirection,
-        orElse: () => cur);
+      (c) => c.lensDirection != cur.lensDirection,
+      orElse: () => cur,
+    );
     if (next == cur) return;
     setState(() => _ready = false);
     await _ctl.dispose();
@@ -198,15 +211,15 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> with WidgetsBindi
       setState(() => _flash = !_flash);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Flash not available on this camera')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Flash not available on this camera')));
       }
     }
   }
 
   Future<void> _pickGallery() async {
     try {
-      final imgPath = await CameraWithGps.pickFromGallery(context);
+      final imgPath = await CameraWithGps.pickFromGallery();
       if (imgPath == null) return;
       Future.delayed(const Duration(milliseconds: 300), () {
         if (context.mounted) Navigator.pop(context, imgPath);
@@ -232,25 +245,41 @@ class _CameraPreviewPageState extends State<CameraPreviewPage> with WidgetsBindi
           if (_err != null)
             ErrorUi(msg: _err!, retry: _initCam)
           else if (_ready)
-            PreviewBox(controller: _ctl, orientation: _ori, fourThree: _fourThree)
+            PreviewBox(
+                controller: _ctl, orientation: _ori, fourThree: _fourThree)
           else
             const Center(child: CircularProgressIndicator()),
           if (gps != null && _ready && _err == null) GpsBanner(message: gps),
           if (_ready && _err == null) ...[
-            TopBar(
-              orientation: _ori,
-              flash: _flash,
-              fourThree: _fourThree,
-              onClose: () => Navigator.pop(context),
-              onToggleFlash: _toggleFlash,
-              onToggleRatio: _toggleRatio,
+            SafeArea(
+              top: true,
+              child: TopBar(
+                orientation: _ori,
+                flash: _flash,
+                fourThree: _fourThree,
+                onClose: () => Navigator.pop(context),
+                onToggleFlash: _toggleFlash,
+                onToggleRatio: _toggleRatio,
+              ),
             ),
-            BottomBar(
-              orientation: _ori,
-              busy: _busy,
-              onShoot: _shoot,
-              onGallery: _pickGallery,
-              onSwitchCam: _switchCam,
+            SafeArea(
+              bottom: true,
+              minimum: const EdgeInsets.only(bottom: 8),
+              child: BottomBar(
+                orientation: _ori,
+                busy: _busy,
+                onShoot: () {
+                  unawaited(_shoot());
+                },
+                onGallery: widget.allowGallery
+                    ? () {
+                        unawaited(_pickGallery());
+                      }
+                    : () => {},
+                onSwitchCam: () {
+                  unawaited(_switchCam());
+                },
+              ),
             ),
           ],
         ],
