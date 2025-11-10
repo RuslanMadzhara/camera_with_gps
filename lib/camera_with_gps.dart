@@ -1,93 +1,70 @@
-import 'dart:io';
-
-import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
-import 'pages/camera_preview_page.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:device_info_plus/device_info_plus.dart';
+
+import 'camera_preview_page.dart';
 
 class CameraWithGps {
   static const MethodChannel _channel = MethodChannel('camera_with_gps');
 
-  static Future<String?> openCamera(BuildContext context) async {
+  /// Open the full-screen camera preview.
+  /// [allowGallery] — whether to show the gallery button in the camera UI.
+  static Future<String?> openCamera(
+    BuildContext context, {
+    bool allowGallery = true,
+  }) async {
     try {
+      // Location: do not block the camera if permission is denied,
+      // the preview page will show a warning.
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         await Geolocator.requestPermission();
       }
 
+      // Cameras
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
         throw Exception('No cameras available on this device.');
       }
 
+      // Controller lifecycle is handled by CameraPreviewPage.
       final resultPath = await Navigator.of(context).push<String>(
         MaterialPageRoute(
-          builder: (_) => CameraPreviewPage(cameras: cameras),
+          builder: (_) => CameraPreviewPage(
+            cameras: cameras,
+            allowGallery: allowGallery,
+          ),
         ),
       );
 
       return resultPath;
     } catch (e) {
-      print('Error opening camera: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to open camera: $e')),
-      );
+      debugPrint('Error opening camera: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to open camera: $e')),
+        );
+      }
       return null;
     }
   }
 
-  static Future<String?> pickFromGallery(BuildContext context) async {
-    String? path;
-    if (Platform.isAndroid) {
-      final deviceInfo = await DeviceInfoPlugin().androidInfo;
-      final brand = (deviceInfo.brand).toLowerCase();
-      final manufacturer = (deviceInfo.manufacturer).toLowerCase();
-      final model = (deviceInfo.model).toLowerCase();
-
-      final isSamsung = brand.contains('samsung') ||
-          manufacturer.contains('samsung') ||
-          model.startsWith('sm-');
-
-      if (isSamsung) {
-        try {
-          path = await _channel.invokeMethod<String>('openDocumentImage');
-          if (path == null) return null;
-        } catch (e) {
-          debugPrint('❌ Error opening document picker: $e');
-          final picker = ImagePicker();
-          final picked = await picker.pickImage(source: ImageSource.gallery);
-          if (picked == null) return null;
-          path = picked.path;
-        }
-      } else {
-        final picker = ImagePicker();
-        final picked = await picker.pickImage(source: ImageSource.gallery);
-        if (picked == null) return null;
-        path = picked.path;
-      }
-
-      // Check GPS after path is obtained
-        final status = await _channel.invokeMethod<String>('checkGps', {'path': path});
-        if (status == 'FAKE') {
-          // Remove GPS metadata if coordinates are invalid (0,0,0)
-        await removeGps(path: path);
-        } else {
-        }
-
-
-      return path;
-    } else {
-      // iOS or other platforms
-      final picker = ImagePicker();
-      final picked = await picker.pickImage(source: ImageSource.gallery);
-      return picked?.path;
-    }
+  /// Convenience helper:
+  /// Open the camera **without** gallery access (photo-only flow).
+  static Future<String?> openCameraPhotoOnly(BuildContext context) {
+    return openCamera(context, allowGallery: false);
   }
 
+  /// Pick a photo from the gallery (used by the camera UI when allowed).
+  static Future<String?> pickFromGallery() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    return picked?.path;
+  }
 
+  /// Add GPS EXIF to a saved photo (implemented natively via MethodChannel).
   static Future<bool> addGps({
     required String path,
     required double latitude,
@@ -100,11 +77,10 @@ class CameraWithGps {
     return result == true || (result is String && result.isNotEmpty);
   }
 
+  /// (Optional) Remove GPS EXIF from a photo — useful if fake coordinates are detected.
   static Future<bool> removeGps({required String path}) async {
-    final dynamic result = await _channel.invokeMethod(
-      'removeGps',
-      {'path': path},
-    );
+    final dynamic result =
+        await _channel.invokeMethod('removeGps', {'path': path});
     return result == true || (result is String && result.isNotEmpty);
   }
 }
