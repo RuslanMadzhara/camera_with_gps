@@ -268,17 +268,10 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
               child: BottomBar(
                 orientation: _ori,
                 busy: _busy,
-                onShoot: () {
-                  unawaited(_shoot());
-                },
-                onGallery: widget.allowGallery
-                    ? () {
-                        unawaited(_pickGallery());
-                      }
-                    : () => {},
-                onSwitchCam: () {
-                  unawaited(_switchCam());
-                },
+                onShoot: () => unawaited(_shoot()),
+                onGallery: () => unawaited(_pickGallery()),
+                onSwitchCam: () => unawaited(_switchCam()),
+                allowGallery: widget.allowGallery,
               ),
             ),
           ],
