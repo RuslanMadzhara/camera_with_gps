@@ -7,7 +7,7 @@ import 'package:geolocator/geolocator.dart';
 
 import '../services/camera_with_gps.dart';
 import '../services/orientation_service.dart';
-import '../utils/photo_processor.dart';
+import '../services/photo_processor.dart';
 import '../widgets/bottom_bar.dart';
 import '../widgets/error_ui.dart';
 import '../widgets/gps_banner.dart';
@@ -18,7 +18,7 @@ class CameraPreviewPage extends StatefulWidget {
   const CameraPreviewPage({
     super.key,
     required this.cameras,
-    this.allowGallery = true, // new: toggle gallery button in the UI
+    this.allowGallery = true,
   });
 
   final List<CameraDescription> cameras;
@@ -38,7 +38,8 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
   bool _flash = false;
 
   /* UI */
-  DeviceOrientation _ori = DeviceOrientation.portraitUp;
+  static const DeviceOrientation _fixedOri =
+      DeviceOrientation.portraitUp; // 🔒 UI тільки портрет
   bool _fourThree = false;
 
   /* GPS */
@@ -46,9 +47,13 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
   LocationPermission? _gpsPerm;
   Timer? _gpsT;
 
-  String? _err;
-  late final OrientationService _oriSvc;
+  /* Orientation */
+  DeviceOrientation _deviceOri = DeviceOrientation.portraitUp;
   StreamSubscription<DeviceOrientation>? _oriSub;
+
+  String? _err;
+
+  DeviceOrientation get _curOri => _deviceOri;
 
   /* ───────── lifecycle ───────── */
   @override
@@ -56,31 +61,60 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    SystemChrome.setPreferredOrientations(const [
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-
-    _oriSvc = OrientationService()..start();
-    _oriSub = _oriSvc.stream.listen((o) {
-      if (mounted && o != _ori) setState(() => _ori = o);
-    });
+    SystemChrome.setPreferredOrientations(const [DeviceOrientation.portraitUp]);
 
     _pickBackCam();
     _checkGps();
     _initCam();
     _gpsT = Timer.periodic(const Duration(seconds: 3), (_) => _checkGps());
+
+    final oriService = OrientationService();
+    oriService.start();
+    _oriSub = oriService.stream.listen((ori) {
+      if (mounted) {
+        setState(() {
+          _deviceOri = ori;
+          print('📱 Device orientation changed: $ori');
+        });
+      }
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (!mounted) return;
+    switch (state) {
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+        if (_ready) {
+          setState(() => _ready = false);
+          try {
+            await _ctl.dispose();
+          } catch (_) {}
+        }
+        break;
+      case AppLifecycleState.resumed:
+        await _initCam();
+        break;
+      default:
+        break;
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _oriSub?.cancel();
-    _oriSvc.stop();
     _gpsT?.cancel();
-    _ctl.dispose();
-    SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+    _oriSub?.cancel();
+    try {
+      _ctl.dispose();
+    } catch (_) {}
+    SystemChrome.setPreferredOrientations(const [
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
     super.dispose();
   }
 
@@ -103,19 +137,18 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
   String? _gpsMsg() {
     if (!_gpsOn) return 'GPS is disabled…';
     if (_gpsPerm == LocationPermission.denied) return 'GPS permission denied…';
-    if (_gpsPerm == LocationPermission.deniedForever)
+    if (_gpsPerm == LocationPermission.deniedForever) {
       return 'GPS permission permanently denied…';
+    }
     return null;
   }
 
   /* ───────── camera helpers ───────── */
   void _pickBackCam() {
-    for (var i = 0; i < widget.cameras.length; i++) {
-      if (widget.cameras[i].lensDirection == CameraLensDirection.back) {
-        _camIdx = i;
-        break;
-      }
-    }
+    final idx = widget.cameras.indexWhere(
+      (c) => c.lensDirection == CameraLensDirection.back,
+    );
+    _camIdx = idx >= 0 ? idx : 0;
   }
 
   Future<void> _initCam() async {
@@ -131,6 +164,12 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
         imageFormatGroup: ImageFormatGroup.jpeg,
       );
       await _ctl.initialize();
+
+      // ❗ НЕ лочимо capture-орієнтацію — покладаємося на EXIF у файлі
+      try {
+        await _ctl.unlockCaptureOrientation();
+      } catch (_) {}
+
       if (_flash) {
         try {
           await _ctl.setFlashMode(FlashMode.torch);
@@ -154,13 +193,22 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
     setState(() => _busy = true);
     try {
       final shot = await _ctl.takePicture();
-      await PhotoProcessor.process(
+
+      final path = await PhotoProcessor.process(
         shot: shot,
-        orientation: _ori,
         fourThree: _fourThree,
+        orientation: _curOri, // ← передаємо поточну орієнтацію
       );
-      await _handleGps(shot.path);
-      if (mounted) Navigator.pop(context, shot.path);
+
+      await _handleGps(path);
+
+      // Закриваємо камеру ПЕРЕД pop → чисті логи
+      try {
+        setState(() => _ready = false);
+        await _ctl.dispose();
+      } catch (_) {}
+
+      if (mounted) Navigator.pop(context, path);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -198,7 +246,9 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
     );
     if (next == cur) return;
     setState(() => _ready = false);
-    await _ctl.dispose();
+    try {
+      await _ctl.dispose();
+    } catch (_) {}
     _camIdx = widget.cameras.indexOf(next);
     await _initCam();
   }
@@ -246,7 +296,10 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
             ErrorUi(msg: _err!, retry: _initCam)
           else if (_ready)
             PreviewBox(
-                controller: _ctl, orientation: _ori, fourThree: _fourThree)
+              controller: _ctl,
+              fourThree: _fourThree,
+              orientation: _fixedOri,
+            )
           else
             const Center(child: CircularProgressIndicator()),
           if (gps != null && _ready && _err == null) GpsBanner(message: gps),
@@ -254,7 +307,7 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
             SafeArea(
               top: true,
               child: TopBar(
-                orientation: _ori,
+                orientation: _fixedOri,
                 flash: _flash,
                 fourThree: _fourThree,
                 onClose: () => Navigator.pop(context),
@@ -266,7 +319,7 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
               bottom: true,
               minimum: const EdgeInsets.only(bottom: 8),
               child: BottomBar(
-                orientation: _ori,
+                orientation: _fixedOri,
                 busy: _busy,
                 onShoot: () => unawaited(_shoot()),
                 onGallery: () => unawaited(_pickGallery()),

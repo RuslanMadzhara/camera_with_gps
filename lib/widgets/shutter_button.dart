@@ -14,6 +14,6 @@ class ShutterButton extends StatelessWidget {
         ),
         child: busy
             ? const Center(child: CircularProgressIndicator())
-            : const Icon(Icons.camera_alt, color: Colors.black),
+            : const Icon(Icons.camera, color: Colors.black),
       );
 }

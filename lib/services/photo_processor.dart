@@ -10,25 +10,34 @@ class PhotoProcessor {
     required DeviceOrientation orientation,
     required bool fourThree,
   }) async {
+    print('📸 PhotoProcessor: Platform = ${Platform.operatingSystem}, orientation = $orientation');
+
     final bytes = await shot.readAsBytes();
     final decoded = img.decodeImage(bytes);
     if (decoded == null) return shot.path;
 
     img.Image imgOut = decoded;
+    print('📸 PhotoProcessor: original size = ${decoded.width}x${decoded.height}');
 
-    final bool isIOS = Platform.isIOS;
     switch (orientation) {
       case DeviceOrientation.landscapeLeft:
+        print('📸 PhotoProcessor: rotating 270° (landscapeLeft)');
         imgOut = img.copyRotate(imgOut, angle: 270);
-        if (isIOS) imgOut = img.copyRotate(imgOut, angle: 90);
         break;
       case DeviceOrientation.landscapeRight:
+        print('📸 PhotoProcessor: rotating 90° (landscapeRight)');
         imgOut = img.copyRotate(imgOut, angle: 90);
-        if (isIOS) imgOut = img.copyRotate(imgOut, angle: 90);
+        break;
+      case DeviceOrientation.portraitDown:
+        print('📸 PhotoProcessor: rotating 180° (portraitDown)');
+        imgOut = img.copyRotate(imgOut, angle: 180);
         break;
       default:
+        print('📸 PhotoProcessor: no rotation (portraitUp or unknown)');
         break;
     }
+
+    print('📸 PhotoProcessor: after rotation size = ${imgOut.width}x${imgOut.height}');
 
     // === cropping ===
     final w = imgOut.width, h = imgOut.height;
