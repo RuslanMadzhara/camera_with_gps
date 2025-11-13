@@ -175,7 +175,6 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
       );
       await _ctl.initialize();
 
-      // ❗ НЕ лочимо capture-орієнтацію — покладаємося на EXIF у файлі
       try {
         await _ctl.unlockCaptureOrientation();
       } catch (_) {}
@@ -207,12 +206,11 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
       final path = await PhotoProcessor.process(
         shot: shot,
         fourThree: _fourThree,
-        orientation: _curOri, // ← передаємо поточну орієнтацію
+        orientation: _curOri,
       );
 
       await _handleGps(path);
 
-      // Закриваємо камеру ПЕРЕД pop → чисті логи
       try {
         setState(() => _ready = false);
         await _ctl.dispose();
@@ -308,7 +306,7 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
             PreviewBox(
               controller: _ctl,
               fourThree: _fourThree,
-              orientation: _curOri, // iOS: адаптується, Android: ігнорується
+              orientation: _curOri,
             )
           else
             const Center(child: CircularProgressIndicator()),

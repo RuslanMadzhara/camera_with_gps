@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:camera_with_gps/services/camera_with_gps.dart';
 import 'package:exif/exif.dart';
 import 'package:flutter/material.dart';
-import 'package:image/image.dart' as img;
 
 void main() {
   runApp(const MyApp());
@@ -34,9 +33,9 @@ class _TestPageState extends State<TestPage> {
   Future<void> _handleCapturedPath(String path) async {
     final bytes = await File(path).readAsBytes();
     final Map<String?, IfdTag>? tags = await readExifFromBytes(bytes);
-    final exifData = img.decodeJpgExif(
-      bytes,
-    ); // keep if you also need binary EXIF
+    // final exifData = img.decodeJpgExif(
+    //   bytes,
+    // ); // keep if you also need binary EXIF
 
     // Debug print of all EXIF
     // Group tags by IFD for readability

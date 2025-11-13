@@ -1,3 +1,7 @@
+## 2.3.1 - 2025-11-13
+- ** "Introduce platform-specific gallery picker for Android and Samsung devices,
+- improve GPS handling for picked images, 
+- and refactor photo processing code"
 ## 2.3.0 - 2025-11-13
 - **Platform-specific photo processing and preview handling:**
   - Split `PhotoProcessor` into platform-specific implementations (`PhotoProcessorAndroid` and `PhotoProcessorIOS`)
