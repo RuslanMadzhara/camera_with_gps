@@ -1,8 +1,32 @@
+## 2.3.0 - 2025-11-13
+- **Platform-specific photo processing and preview handling:**
+  - Split `PhotoProcessor` into platform-specific implementations (`PhotoProcessorAndroid` and `PhotoProcessorIOS`)
+  - Split `PreviewBox` into platform-specific implementations (`PreviewBoxAndroid` and `PreviewBoxIOS`)
+  - Each platform now has independent rotation logic and preview behavior
+- **iOS improvements:**
+  - Added adaptive preview that rotates to landscape when device is rotated
+  - Fixed photo rotation for both landscape orientations (left and right)
+  - Implemented correct aspect ratio calculation after rotation using actual dimensions
+  - Added 90° correction for landscape photos to ensure proper orientation
+- **Android improvements:**
+  - Maintained portrait-only preview (UI locked to portrait)
+  - Integrated `OrientationService` for accurate device orientation detection via sensors
+  - Fixed horizontal photo rotation issues
+  - Preserved original working rotation logic
+- **Unified orientation detection:**
+  - Both platforms now use `OrientationService` for sensor-based orientation detection
+  - iOS: Preview adapts with `setState()` for dynamic UI updates
+  - Android: Orientation tracked without `setState()` to maintain fixed portrait preview
+- **Code organization:**
+  - Created platform-agnostic facade classes that delegate to platform-specific implementations
+  - Improved maintainability by separating iOS and Android behavior
+  - Added comprehensive debug logging for orientation changes and photo processing
+
 ## 2.2.0 - 2025-11-12
-- **"Refactor and enhance camera functionality: consolidate photo processing logic, 
+- **Refactor and enhance camera functionality: consolidate photo processing logic,
 - introduce animated rotation for UI,
-- refactor lifecycle handling, 
-- optimize orientation services, 
+- refactor lifecycle handling,
+- optimize orientation services,
 - and update iOS configurations for EXIF and GPS metadata improvements."
 ## 2.0.0 - 2025-06-23
 - **Major refactoring of camera app structure:**

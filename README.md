@@ -6,16 +6,26 @@ A Flutter plugin for capturing photos with embedded GPS metadata. This package p
 
 ## Features
 
-- 📸 Take photos with a customizable camera interface
-- 🌍 Automatically embed GPS coordinates into photo metadata
-- 🔄 Support for both portrait and landscape orientations
-- 🔦 Flash control
-- 📱 Camera switching (front/back)
-- 📐 Aspect ratio toggling (16:9 or 4:3)
-- 🖼️ Gallery image picking
-- ⚠️ GPS status warnings (disabled, permission denied, etc.)
-- 📱 Support for both Android and iOS
-- 🔍 **Optimized GPS metadata storage for Samsung Galaxy S series phones**
+- 📸 **Take photos with a customizable camera interface**
+- 🌍 **Automatically embed GPS coordinates into photo metadata**
+- 🔄 **Platform-optimized orientation handling**
+  - iOS: Adaptive preview that rotates with device orientation
+  - Android: Portrait-locked UI with landscape photo support
+- 🔦 **Flash control** with torch mode
+- 📱 **Camera switching** (front/back)
+- 📐 **Aspect ratio toggling** (16:9 or 4:3)
+- 🖼️ **Gallery image picking** with optional toggle
+  - Enable/disable gallery button in camera UI
+  - `openCamera(context, allowGallery: true/false)`
+  - `openCameraPhotoOnly(context)` - camera-only mode
+- ⚠️ **GPS status warnings** (disabled, permission denied, etc.)
+- 🔍 **Smart GPS metadata handling**
+  - Automatic removal of fake/invalid GPS data
+  - Optimized for Samsung Galaxy S series phones
+  - Manual GPS addition/removal methods
+- 📱 **Full Android and iOS support**
+- 🎯 **Accurate orientation detection** via device sensors
+- 🖼️ **Proper photo rotation** for all device orientations
 
 ## Requirements
 
@@ -46,7 +56,7 @@ Add the following to your `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  camera_with_gps: ^2.0.0
+  camera_with_gps: ^2.3.0
 ```
 
 Then run:
@@ -63,13 +73,24 @@ flutter pub get
 import 'package:camera_with_gps/camera_with_gps.dart';
 import 'package:flutter/material.dart';
 
-// Open camera and take a photo with GPS metadata
-Future<void> takePhotoWithGPS(BuildContext context) async {
-  final String? imagePath = await CameraWithGps.openCamera(context);
+// Open camera with gallery access (default)
+Future<void> takePhotoWithGallery(BuildContext context) async {
+  final String? imagePath = await CameraWithGps.openCamera(
+    context,
+    allowGallery: true, // Show gallery button (default)
+  );
 
   if (imagePath != null) {
-    // Use the image path as needed
     print('Image saved at: $imagePath');
+  }
+}
+
+// Open camera without gallery access (photo-only mode)
+Future<void> takePhotoOnly(BuildContext context) async {
+  final String? imagePath = await CameraWithGps.openCameraPhotoOnly(context);
+
+  if (imagePath != null) {
+    print('Photo captured at: $imagePath');
   }
 }
 
@@ -78,7 +99,6 @@ Future<void> pickImageFromGallery() async {
   final String? imagePath = await CameraWithGps.pickFromGallery();
 
   if (imagePath != null) {
-    // Use the image path as needed
     print('Image selected from gallery: $imagePath');
   }
 }
@@ -95,6 +115,17 @@ Future<void> addGPSToImage(String imagePath, double latitude, double longitude) 
     print('GPS data added successfully');
   } else {
     print('Failed to add GPS data');
+  }
+}
+
+// Remove GPS data from an image
+Future<void> removeGPSFromImage(String imagePath) async {
+  final bool success = await CameraWithGps.removeGps(path: imagePath);
+
+  if (success) {
+    print('GPS data removed successfully');
+  } else {
+    print('Failed to remove GPS data');
   }
 }
 ```
@@ -175,40 +206,94 @@ class _CameraExampleState extends State<CameraExample> {
 ### CameraWithGps.openCamera
 
 **Signature:**
-`static Future<String?> openCamera(BuildContext context)`
+```dart
+static Future<String?> openCamera(
+  BuildContext context, {
+  bool allowGallery = true,
+})
+```
 
-Opens a camera interface that allows the user to take a photo. If GPS is enabled and permission is granted, the photo will automatically have GPS coordinates embedded in its metadata.
+Opens a full-screen camera interface for taking photos with optional gallery access.
 
 **Parameters:**
-- `context`: The BuildContext used for navigation.
+- `context`: The BuildContext used for navigation
+- `allowGallery`: Whether to show the gallery button in the camera UI (default: `true`)
 
 **Returns:**
-- A `Future<String?>` that resolves to the path of the captured image, or `null` if the operation was cancelled or failed.
+- A `Future<String?>` that resolves to the path of the captured/selected image, or `null` if cancelled
+
+**Features:**
+- Automatically embeds GPS coordinates if location permission is granted
+- Displays GPS status warnings when disabled or permission denied
+- Supports flash control, camera switching, and aspect ratio toggling
+- Optional gallery button for selecting existing photos
+
+### CameraWithGps.openCameraPhotoOnly
+
+**Signature:**
+```dart
+static Future<String?> openCameraPhotoOnly(BuildContext context)
+```
+
+Convenience method to open the camera **without** gallery access (photo-only flow).
+
+**Parameters:**
+- `context`: The BuildContext used for navigation
+
+**Returns:**
+- A `Future<String?>` that resolves to the path of the captured image, or `null` if cancelled
 
 ### CameraWithGps.pickFromGallery
 
 **Signature:**
-`static Future<String?> pickFromGallery()`
+```dart
+static Future<String?> pickFromGallery()
+```
 
 Opens the device's gallery to select an existing image.
 
 **Returns:**
-- A `Future<String?>` that resolves to the path of the selected image, or `null` if no image was selected.
+- A `Future<String?>` that resolves to the path of the selected image, or `null` if no image was selected
 
 ### CameraWithGps.addGps
 
 **Signature:**
-`static Future<bool> addGps({required String path, required double latitude, required double longitude})`
+```dart
+static Future<bool> addGps({
+  required String path,
+  required double latitude,
+  required double longitude,
+})
+```
 
-Adds GPS coordinates to an existing image file.
+Adds GPS coordinates to an existing image file's EXIF metadata.
 
 **Parameters:**
-- `path`: The file path of the image.
-- `latitude`: The latitude coordinate to embed.
-- `longitude`: The longitude coordinate to embed.
+- `path`: The file path of the image
+- `latitude`: The latitude coordinate to embed
+- `longitude`: The longitude coordinate to embed
 
 **Returns:**
-- A `Future<bool>` that resolves to `true` if the operation was successful, or `false` otherwise.
+- A `Future<bool>` that resolves to `true` if successful, `false` otherwise
+
+**Note:** Automatically removes any existing fake or invalid GPS data before adding new coordinates.
+
+### CameraWithGps.removeGps
+
+**Signature:**
+```dart
+static Future<bool> removeGps({required String path})
+```
+
+Removes GPS coordinates from an image file's EXIF metadata.
+
+**Parameters:**
+- `path`: The file path of the image
+
+**Returns:**
+- A `Future<bool>` that resolves to `true` if successful, `false` otherwise
+
+**Use case:** Useful when fake coordinates are detected or privacy concerns require GPS data removal.
 
 ## Features and Limitations
 
