@@ -67,9 +67,11 @@ class CameraWithGps {
     try {
       if (Platform.isAndroid) {
         final info = await DeviceInfoPlugin().androidInfo;
-        final brand = (info.brand ?? '').toLowerCase();
-        final manufacturer = (info.manufacturer ?? '').toLowerCase();
-        final model = (info.model ?? '').toLowerCase();
+
+        // 🔧 ТУТ БУЛИ warning-и: прибрав ?? ''
+        final brand = info.brand.toLowerCase();
+        final manufacturer = info.manufacturer.toLowerCase();
+        final model = info.model.toLowerCase();
 
         final isSamsung = brand.contains('samsung') ||
             manufacturer.contains('samsung') ||
