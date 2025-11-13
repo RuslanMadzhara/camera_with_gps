@@ -1,6 +1,5 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 /// Android PreviewBox - завжди показує портретний preview (UI заблокований в portrait)
 class PreviewBoxAndroid extends StatelessWidget {
