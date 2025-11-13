@@ -1,4 +1,4 @@
-## 2.3.0 - 2025-11-13
+## 2.3.1 - 2025-11-13
 - ** "Introduce platform-specific gallery picker for Android and Samsung devices,
 - improve GPS handling for picked images, 
 - and refactor photo processing code"
