@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -53,6 +54,7 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
 
   String? _err;
 
+  /// Поточна орієнтація з сенсорів пристрою (для обох платформ)
   DeviceOrientation get _curOri => _deviceOri;
 
   /* ───────── lifecycle ───────── */
@@ -68,14 +70,22 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
     _initCam();
     _gpsT = Timer.periodic(const Duration(seconds: 3), (_) => _checkGps());
 
+    // Використовуємо OrientationService для обох платформ
     final oriService = OrientationService();
     oriService.start();
     _oriSub = oriService.stream.listen((ori) {
-      if (mounted) {
-        setState(() {
-          _deviceOri = ori;
-          print('📱 Device orientation changed: $ori');
-        });
+      if (Platform.isIOS) {
+        // iOS: оновлюємо орієнтацію З setState, щоб preview адаптувався
+        if (mounted) {
+          setState(() {
+            _deviceOri = ori;
+          });
+          print('📱 iOS: Device orientation changed: $ori');
+        }
+      } else {
+        // Android: оновлюємо орієнтацію БЕЗ setState (preview не адаптується)
+        _deviceOri = ori;
+        print('📱 Android: Device orientation changed: $ori');
       }
     });
   }
@@ -298,7 +308,7 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
             PreviewBox(
               controller: _ctl,
               fourThree: _fourThree,
-              orientation: _fixedOri,
+              orientation: _curOri, // iOS: адаптується, Android: ігнорується
             )
           else
             const Center(child: CircularProgressIndicator()),

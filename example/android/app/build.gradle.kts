@@ -22,7 +22,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.camera_with_gps_example"
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
